@@ -7,8 +7,9 @@ import type { Db } from './db.js';
 import { createToken, authenticate, authorize } from './auth.js';
 import { createAdultSchema, geocodeSchema, loginSchema, registerSchema, updateAdultSchema } from './validation.js';
 import { config } from './config.js';
+import { registerIntegratedRoutes } from './integrated.js';
 
-type UserRow = { id_usuario:number; nombre:string; correo:string; password_hash:string; rol:'ADMINISTRADOR'|'ADULTO_MAYOR'; estado:string };
+type UserRow = { id_usuario:number; nombre:string; correo:string; password_hash:string; rol:'ADMINISTRADOR'|'ADULTO_MAYOR'; estado:string; adultId?:number; id_administrador?:number };
 
 type GeocodeResult = { direccion:string; latitude:number; longitude:number };
 type Geocoder = (direccion:string) => Promise<GeocodeResult>;
@@ -31,14 +32,25 @@ export function createApp(db: Db, geocoder:Geocoder = googleGeocode) {
 
   app.post('/api/auth/login', async (req, res) => {
     const data = loginSchema.parse(req.body);
-    const user = db.prepare('SELECT id_usuario,nombre,correo,password_hash,rol,estado FROM usuarios WHERE correo = ? COLLATE NOCASE').get(data.correo) as UserRow | undefined;
+    const user = db.prepare(`SELECT u.id_usuario,u.nombre,u.correo,u.password_hash,u.rol,u.estado,
+      a.id_adulto AS adultId,r.id_administrador
+      FROM usuarios u LEFT JOIN adultos_mayores a ON a.id_usuario=u.id_usuario
+      LEFT JOIN relaciones r ON r.id_adulto=a.id_adulto AND r.estado='ACTIVO'
+      WHERE u.correo = ? COLLATE NOCASE`).get(data.correo) as UserRow | undefined;
     if (!user || !(await bcrypt.compare(data.password, user.password_hash))) { res.status(401).json({ message: 'Correo o contraseña incorrectos.' }); return; }
     if (user.estado !== 'ACTIVO') { res.status(403).json({ message: 'Esta cuenta está inactiva. Contacta a tu administrador.' }); return; }
-    const usuario = { id_usuario: user.id_usuario, nombre: user.nombre, rol: user.rol };
+    const usuario = { id_usuario: user.id_usuario, nombre: user.nombre, rol: user.rol, ...(user.adultId ? { adultId:user.adultId, id_administrador:user.id_administrador } : {}) };
     res.json({ token: createToken(usuario), usuario });
   });
 
-  app.get('/api/auth/me', authenticate, (req, res) => res.json({ usuario: req.user }));
+  app.get('/api/auth/me', authenticate, (req, res) => {
+    const usuario=db.prepare(`SELECT u.id_usuario,u.nombre,u.rol,a.id_adulto AS adultId,r.id_administrador
+      FROM usuarios u LEFT JOIN adultos_mayores a ON a.id_usuario=u.id_usuario
+      LEFT JOIN relaciones r ON r.id_adulto=a.id_adulto AND r.estado='ACTIVO'
+      WHERE u.id_usuario=? AND u.estado='ACTIVO'`).get(req.user!.id_usuario);
+    if(!usuario){res.status(401).json({message:'Tu cuenta ya no está activa.'});return;}
+    res.json({usuario});
+  });
 
   app.get('/api/adults', authenticate, authorize('ADMINISTRADOR'), (req, res) => {
     const adults = db.prepare(`SELECT a.id_adulto AS adultId,a.id_adulto,u.id_usuario,u.nombre,u.cedula,u.correo,u.telefono,u.estado,
@@ -106,6 +118,8 @@ export function createApp(db: Db, geocoder:Geocoder = googleGeocode) {
       res.status(422).json({ message:'No pudimos encontrar esa dirección en Quito.' });
     }
   });
+
+  registerIntegratedRoutes(app, db);
 
   app.use((_req,res) => res.status(404).json({ message:'Ruta no encontrada.' }));
   app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {

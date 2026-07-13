@@ -67,3 +67,25 @@ Recibe `{ "direccion": "La Carolina" }`. El servidor añade Quito, Ecuador y dev
 - `422`: dirección no encontrada.
 - `503`: clave de geocodificación no configurada.
 
+## Ubicación y zonas seguras — Mauricio
+
+- `POST /locations`: guarda `adultId`, `latitude`, `longitude`, `accuracy`, `fecha`, `hora` y dirección. Devuelve `estadoZona`.
+- `GET /locations/{adultId}/latest`: devuelve la última ubicación y su estado de zona.
+- `POST /safe-zones`: crea una zona de 50 a 2.000 metros.
+- `GET /safe-zones/{adultId}`: consulta la zona del adulto.
+- `PUT /safe-zones/{id}`: edita centro, dirección, radio o estado.
+- `DELETE /safe-zones/{id}`: elimina la zona.
+
+Estados de zona: `DENTRO_DE_ZONA`, `FUERA_DE_ZONA`, `UBICACION_DESACTIVADA`, `SIN_ACTUALIZACION`.
+
+## S.O.S., alertas, rutas y lugares — Juan
+
+- `POST /alerts`: crea una alerta `SOS` o `FUERA_DE_ZONA`.
+- `GET /alerts/{adultId}`: historial del adulto.
+- `PUT /alerts/{id}/status`: actualiza a `NUEVA`, `VISTA`, `ATENDIDA` o `CERRADA`.
+- `GET /contacts/{adultId}`: obtiene el familiar responsable y teléfono de emergencia.
+- `POST /routes`: calcula distancia, duración y polyline con Routes API.
+- `POST /nearby-places`: busca `hospital`, `farmacia`, `centro_salud`, `policia` o `punto_ayuda` en 2 km.
+
+Todos estos endpoints requieren JWT. La API valida el `adultId` contra la relación creada por Ismael; no acepta datos de adultos ajenos.
+

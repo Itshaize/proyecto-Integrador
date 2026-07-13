@@ -1,13 +1,13 @@
 # Cuido+
 
-Aplicación móvil para que un familiar administre hasta dos adultos mayores, consulte su ubicación y reciba solicitudes de ayuda. Incluye un único acceso con redirección por rol, una API segura y geocodificación de direcciones de Quito.
+Aplicación móvil integrada para que un familiar administre hasta dos adultos mayores, consulte su ubicación y zona segura, reciba alertas y encuentre rutas o lugares de ayuda. Incluye un único acceso con redirección por rol y una API segura común para los módulos de Ismael, Mauricio y Juan.
 
 ## Stack
 
 - App: Expo + React Native + TypeScript
 - API: Node.js + Express + SQLite nativo
 - Seguridad: JWT de 8 horas y bcrypt (12 rondas)
-- Integraciones: Google Geocoding API, ubicación nativa, mapas nativos
+- Integraciones: Location API nativa, Maps SDK, Geocoding, Routes, Places y geofencing
 
 ## Ejecutar el proyecto
 
@@ -45,6 +45,9 @@ npm run build -w @cuido/api
 - La cuenta del adulto se crea en la misma transacción que su perfil y relación.
 - Un administrador no puede consultar ni editar adultos de otro administrador.
 - Las claves externas permanecen en el backend.
+- El adulto comparte `latitude`, `longitude`, `accuracy`, `fecha` y `hora` con su mismo `adultId`.
+- La salida de zona crea automáticamente una alerta `FUERA_DE_ZONA` sin duplicarla en cada actualización.
+- El S.O.S., historial, estados, rutas y cinco categorías de ayuda usan datos persistentes o APIs reales.
 
-Consulta el contrato completo en [docs/API.md](docs/API.md) y los casos de prueba en [docs/PRUEBAS.md](docs/PRUEBAS.md).
+Consulta el contrato completo en [docs/API.md](docs/API.md), las decisiones en [docs/INTEGRACION.md](docs/INTEGRACION.md) y los casos de prueba en [docs/PRUEBAS.md](docs/PRUEBAS.md).
 

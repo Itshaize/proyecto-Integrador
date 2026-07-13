@@ -41,6 +41,43 @@ export function createDatabase(path = config.databasePath): Db {
       FOREIGN KEY (id_administrador) REFERENCES usuarios(id_usuario),
       FOREIGN KEY (id_adulto) REFERENCES adultos_mayores(id_adulto) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS ubicaciones (
+      id_ubicacion INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_adulto INTEGER NOT NULL,
+      latitude REAL NOT NULL,
+      longitude REAL NOT NULL,
+      accuracy REAL NOT NULL,
+      fecha TEXT NOT NULL,
+      hora TEXT NOT NULL,
+      direccion TEXT,
+      FOREIGN KEY (id_adulto) REFERENCES adultos_mayores(id_adulto) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_ubicaciones_adulto_fecha
+      ON ubicaciones(id_adulto, id_ubicacion DESC);
+    CREATE TABLE IF NOT EXISTS zonas_seguras (
+      id_zona INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_adulto INTEGER NOT NULL UNIQUE,
+      nombre TEXT NOT NULL,
+      direccion TEXT NOT NULL,
+      latitude REAL NOT NULL,
+      longitude REAL NOT NULL,
+      radio INTEGER NOT NULL CHECK (radio BETWEEN 50 AND 2000),
+      estado TEXT NOT NULL DEFAULT 'ACTIVO' CHECK (estado IN ('ACTIVO','INACTIVO')),
+      FOREIGN KEY (id_adulto) REFERENCES adultos_mayores(id_adulto) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS alertas (
+      id_alerta INTEGER PRIMARY KEY AUTOINCREMENT,
+      id_adulto INTEGER NOT NULL,
+      tipo TEXT NOT NULL CHECK (tipo IN ('SOS','FUERA_DE_ZONA')),
+      fecha TEXT NOT NULL,
+      hora TEXT NOT NULL,
+      latitude REAL NOT NULL,
+      longitude REAL NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'NUEVA' CHECK (estado IN ('NUEVA','VISTA','ATENDIDA','CERRADA')),
+      FOREIGN KEY (id_adulto) REFERENCES adultos_mayores(id_adulto) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_alertas_adulto_fecha
+      ON alertas(id_adulto, id_alerta DESC);
   `);
   return db;
 }
