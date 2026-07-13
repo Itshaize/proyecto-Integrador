@@ -3,401 +3,484 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Módulo de Asistencia del Adulto Mayor - SOS y Rutas</title>
-  
+  <meta name="description" content="Panel de asistencia para adulto mayor con botón SOS, historial de alertas, rutas de rescate y lugares de emergencia cercanos.">
+  <title>Asistencia Adulto Mayor — SOS y Rutas</title>
+
   <!-- Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <!-- Leaflet Map CSS (Fallback) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <!-- Leaflet CSS (fallback cuando no hay Google Maps Key) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 
-  <!-- App Styles -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- App Container (Centers mobile mockup on desktop) -->
-  <div class="app-layout">
-    
-    <!-- LEFT PANEL: Developer Simulation Console (Ismael & Mauricio Mock Integration) -->
-    <aside class="sim-console" id="simConsole">
-      <div class="sim-header">
-        <h3><i class="fa-solid fa-laptop-code"></i> Consola de Simulación</h3>
-        <span class="sim-sub">Prueba de Integración Técnica</span>
+<div class="app-layout">
+
+  <!-- ================================================================
+       PANEL IZQUIERDO: Consola de Simulación (para el equipo de devs)
+       Simula la integración con Ismael (Auth) y Mauricio (Ubicación)
+       ================================================================ -->
+  <aside class="sim-console" id="simConsole">
+    <div class="sim-header">
+      <h3><i class="fa-solid fa-laptop-code"></i> Consola de Simulación</h3>
+      <span class="sim-sub">Prueba de Integración — Módulo Juan</span>
+    </div>
+
+    <div class="sim-body">
+
+      <!-- ISMAEL: Módulo de autenticación -->
+      <div class="sim-section">
+        <h4><i class="fa-solid fa-user-shield"></i> Módulo Ismael (Auth)</h4>
+        <small class="sim-desc">Contrato: <code>{ adultId, nombre, id_administrador }</code></small>
+        <div class="form-group">
+          <label for="simAdultId">adultId (entero):</label>
+          <input type="number" id="simAdultId" value="1" min="1">
+        </div>
+        <div class="form-group">
+          <label for="simAdultNombre">nombre:</label>
+          <input type="text" id="simAdultNombre" value="Juan Salvador">
+        </div>
+        <div class="form-group">
+          <label for="simAdminId">id_administrador:</label>
+          <input type="number" id="simAdminId" value="10">
+        </div>
+        <button type="button" class="btn-sim" id="btnUpdateSession">
+          <i class="fa-solid fa-rotate"></i> Aplicar Sesión
+        </button>
       </div>
-      <div class="sim-body">
-        
-        <!-- Ismael's Auth Simulator -->
-        <div class="sim-section">
-          <h4><i class="fa-solid fa-user-shield"></i> Módulo de Ismael (Autenticación)</h4>
-          <div class="form-group">
-            <label for="simAdultId">Adult ID (adultId):</label>
-            <input type="text" id="simAdultId" value="adult-123">
-          </div>
-          <div class="form-group">
-            <label for="simAdultName">Nombre del Adulto Mayor:</label>
-            <input type="text" id="simAdultName" value="Juan Salvador">
-          </div>
-          <div class="form-group">
-            <label for="simAdminId">ID Administrador:</label>
-            <input type="text" id="simAdminId" value="admin-456">
-          </div>
-          <button type="button" class="btn-sim" id="btnUpdateSession">Actualizar Sesión</button>
+
+      <!-- MAURICIO: Módulo de ubicación y geofencing -->
+      <div class="sim-section">
+        <h4><i class="fa-solid fa-location-crosshairs"></i> Módulo Mauricio (Ubicación)</h4>
+        <small class="sim-desc">Contrato: <code>{ adultId, latitude, longitude, estadoZona }</code></small>
+        <div class="form-group">
+          <label for="simLat">latitude (adulto):</label>
+          <input type="number" id="simLat" value="-0.180653" step="0.000001">
+        </div>
+        <div class="form-group">
+          <label for="simLng">longitude (adulto):</label>
+          <input type="number" id="simLng" value="-78.467834" step="0.000001">
+        </div>
+        <div class="form-group">
+          <label for="simEstadoZona">estadoZona:</label>
+          <select id="simEstadoZona">
+            <option value="DENTRO_DE_ZONA">DENTRO_DE_ZONA</option>
+            <option value="FUERA_DE_ZONA">FUERA_DE_ZONA ⚠️</option>
+          </select>
+          <small class="help-text">FUERA_DE_ZONA crea alerta automática (estado: NUEVA).</small>
         </div>
 
-        <!-- Mauricio's Location & Geofencing Simulator -->
-        <div class="sim-section">
-          <h4><i class="fa-solid fa-location-crosshairs"></i> Módulo de Mauricio (Ubicación)</h4>
-          <div class="form-group">
-            <label for="simLat">Latitud del Adulto:</label>
-            <input type="number" id="simLat" value="-0.180653" step="0.000001">
-          </div>
-          <div class="form-group">
-            <label for="simLng">Longitud del Adulto:</label>
-            <input type="number" id="simLng" value="-78.467834" step="0.000001">
-          </div>
-          <div class="form-group">
-            <label for="simZoneStatus">Estado de Zona Segura:</label>
-            <select id="simZoneStatus">
-              <option value="DENTRO_DE_ZONA">DENTRO_DE_ZONA (Seguro)</option>
-              <option value="FUERA_DE_ZONA">FUERA_DE_ZONA (Alerta de Escape)</option>
-            </select>
-            <small class="help-text">Al seleccionar FUERA_DE_ZONA se creará automáticamente una alerta en el backend.</small>
-          </div>
-          
-          <!-- Familiar Coordinates (For route calculation) -->
-          <div class="form-group border-top">
-            <label for="simFamLat" style="margin-top: 8px; display: block;">Latitud del Familiar (Origen Ruta):</label>
-            <input type="number" id="simFamLat" value="-0.188553" step="0.000001">
-          </div>
-          <div class="form-group">
-            <label for="simFamLng">Longitud del Familiar (Origen Ruta):</label>
-            <input type="number" id="simFamLng" value="-78.480834" step="0.000001">
-          </div>
-
-          <button type="button" class="btn-sim" id="btnUpdateLocation">Enviar Ubicación y Estado</button>
+        <!-- Ubicación del familiar para calcular ruta -->
+        <div class="form-group" style="margin-top:12px; border-top:1px dashed #243249; padding-top:10px;">
+          <label for="simFamLat">latitude (familiar/origen ruta):</label>
+          <input type="number" id="simFamLat" value="-0.188553" step="0.000001">
         </div>
-
-        <!-- System Debug Actions -->
-        <div class="sim-section info-section">
-          <h4><i class="fa-solid fa-circle-info"></i> Información Técnica</h4>
-          <p>La aplicación detecta si hay configurada una clave API en el archivo <code>.env</code>. Si no se detecta, utilizará mapas interactivos de <b>Leaflet (OpenStreetMap)</b> y mockeará las respuestas de Routes y Places API manteniendo la funcionalidad.</p>
-          <div class="api-status">
-            <span>Servidor API:</span>
-            <span id="apiStatusIndicator" class="status-online">Online</span>
-          </div>
-          <div class="api-status">
-            <span>Google SDK:</span>
-            <span id="sdkStatusIndicator" class="status-unknown">Verificando...</span>
-          </div>
+        <div class="form-group">
+          <label for="simFamLng">longitude (familiar/origen ruta):</label>
+          <input type="number" id="simFamLng" value="-78.480834" step="0.000001">
         </div>
-
+        <button type="button" class="btn-sim" id="btnUpdateLocation">
+          <i class="fa-solid fa-satellite-dish"></i> Enviar Ubicación
+        </button>
       </div>
-    </aside>
 
-    <!-- RIGHT MAIN CONTENT: The simulated Smartphone Screen -->
-    <main class="phone-frame">
-      
-      <!-- Phone Top Status Bar (aesthetic) -->
-      <div class="phone-status-bar">
-        <span class="time">08:29</span>
-        <div class="status-icons">
-          <i class="fa-solid fa-signal"></i>
-          <i class="fa-solid fa-wifi"></i>
-          <i class="fa-solid fa-battery-three-quarters"></i>
+      <!-- Estado técnico del sistema -->
+      <div class="sim-section info-section">
+        <h4><i class="fa-solid fa-circle-info"></i> Estado del Sistema</h4>
+        <p>Sin Google API Key, se usan <b>Leaflet/OSM</b> para mapas y datos simulados para Routes y Places.</p>
+        <div class="api-status-row">
+          <span>Servidor:</span>
+          <span class="tag-online" id="apiStatusIndicator">Online</span>
+        </div>
+        <div class="api-status-row">
+          <span>Google SDK:</span>
+          <span class="tag-unknown" id="sdkStatusIndicator">Verificando...</span>
+        </div>
+        <div class="api-status-row">
+          <span>Base de datos:</span>
+          <span class="tag-unknown" id="dbStatusIndicator">Verificando...</span>
         </div>
       </div>
 
-      <!-- App Header: Shows safe zone warning / state and user profile -->
-      <header class="app-header" id="appHeader">
-        <div class="header-user-info">
-          <span class="user-greeting">Panel del Adulto</span>
-          <h2 id="activeProfileName">Cargando...</h2>
-        </div>
-        <div class="zone-badge" id="zoneBadge">
-          <i class="fa-solid fa-shield-halved"></i> <span id="zoneBadgeText">Cargando...</span>
-        </div>
-      </header>
+    </div><!-- /sim-body -->
+  </aside>
 
-      <!-- Main Scrollable Views Container -->
-      <div class="view-viewport" id="viewport">
+  <!-- ================================================================
+       PANTALLA PRINCIPAL: Marco de smartphone
+       ================================================================ -->
+  <main class="phone-frame">
 
-        <!-- ==================== VIEW 1: INICIO (Adulto Mayor) ==================== -->
-        <section class="app-view active" id="view-inicio">
-          <!-- Active Location Card -->
-          <div class="location-card">
-            <div class="location-details">
-              <div class="loc-icon-bg">
-                <i class="fa-solid fa-location-dot"></i>
-              </div>
-              <div class="loc-text">
-                <span class="loc-label">Mi ubicación activa</span>
-                <span class="loc-address" id="locAddressText">Determinando dirección...</span>
-              </div>
+    <!-- Barra de estado (estética) -->
+    <div class="phone-status-bar">
+      <span class="sb-time" id="sbTime">08:29</span>
+      <div class="sb-icons">
+        <i class="fa-solid fa-signal"></i>
+        <i class="fa-solid fa-wifi"></i>
+        <i class="fa-solid fa-battery-three-quarters"></i>
+      </div>
+    </div>
+
+    <!-- Cabecera dinámica de la app -->
+    <header class="app-header" id="appHeader">
+      <div class="header-left">
+        <span class="header-greeting" id="headerGreeting">Hola,</span>
+        <h2 class="header-name" id="headerName">cargando...</h2>
+      </div>
+      <div class="zone-badge" id="zoneBadge">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span id="zoneBadgeText">cargando...</span>
+      </div>
+    </header>
+
+    <!-- Área principal de vistas (scroll interno) -->
+    <div class="view-viewport" id="viewport">
+
+
+      <!-- ============================================================
+           PANTALLA 1 — Inicio del adulto mayor
+           Campos: Hola nombre / Ubicación activa / Estado zona segura /
+                   Última actualización
+           Botones: SOS / Llamar a mi familiar / Compartir ubicación /
+                    Ver mi ubicación
+           ============================================================ -->
+      <section class="app-view active" id="view-inicio">
+
+        <!-- Tarjeta de ubicación activa -->
+        <div class="location-card">
+          <div class="location-row">
+            <div class="loc-icon"><i class="fa-solid fa-location-dot"></i></div>
+            <div class="loc-info">
+              <span class="loc-label">Ubicación activa</span>
+              <span class="loc-address" id="locAddressText">Determinando dirección...</span>
+              <span class="loc-update" id="locUpdateTime">Última actualización: --</span>
             </div>
-            <!-- Interactive Map Panel -->
-            <div class="map-container" id="map-inicio">
-              <div class="map-placeholder">Cargando mapa interactivo...</div>
+          </div>
+          <!-- Mapa embebido en la tarjeta de inicio -->
+          <div class="map-container" id="map-inicio">
+            <div class="map-placeholder"><i class="fa-solid fa-spinner fa-spin"></i> Cargando mapa...</div>
+          </div>
+        </div>
+
+        <!-- BOTÓN SOS — siempre visible, pulsante, grande -->
+        <div class="sos-wrapper">
+          <button class="btn-sos" id="btnSosTrigger" aria-label="Botón de emergencia SOS">
+            <div class="sos-circle">
+              <i class="fa-solid fa-phone-flip sos-icon"></i>
+              <span class="sos-label">S.O.S.</span>
+              <span class="sos-hint">Toca para pedir ayuda</span>
             </div>
-          </div>
+            <span class="sos-ring"></span>
+          </button>
+        </div>
 
-          <!-- SOS Container (Big visible SOS action button) -->
-          <div class="sos-action-area">
-            <button class="btn-sos-trigger" id="btnSosTrigger">
-              <div class="sos-inner-circle">
-                <i class="fa-solid fa-phone-flip sos-phone-icon"></i>
-                <span class="sos-text">S.O.S.</span>
-                <span class="sos-subtext">Toca para pedir ayuda</span>
-              </div>
-              <div class="sos-pulse-ring"></div>
-            </button>
-          </div>
+        <!-- Botones de acción rápida (fáciles de presionar) -->
+        <div class="quick-grid">
+          <button class="btn-quick btn-call" id="btnCallFamiliar">
+            <i class="fa-solid fa-phone"></i>
+            <span>Llamar a mi<br>familiar</span>
+          </button>
+          <button class="btn-quick btn-share" id="btnShareUbicacion">
+            <i class="fa-solid fa-share-nodes"></i>
+            <span>Compartir<br>ubicación</span>
+          </button>
+          <button class="btn-quick btn-view-map" id="btnVerUbicacion">
+            <i class="fa-solid fa-map-location-dot"></i>
+            <span>Ver mi<br>ubicación</span>
+          </button>
+        </div>
 
-          <!-- Quick Action Buttons for Elderly -->
-          <div class="quick-actions-row">
-            <button class="btn-quick btn-call-family" id="btnCallFamilyQuick">
+      </section>
+
+
+      <!-- ============================================================
+           PANTALLA 2 — Contacto de emergencia
+           Campos: Nombre del familiar / Teléfono
+           Botones: Llamar / Enviar mensaje
+           ============================================================ -->
+      <section class="app-view" id="view-contacto">
+        <div class="section-title">
+          <h3><i class="fa-solid fa-address-card"></i> Contacto de Emergencia</h3>
+          <p>El familiar que recibirá tus alertas SOS y notificaciones de zona.</p>
+        </div>
+
+        <!-- Tarjeta del contacto -->
+        <div class="contact-card" id="contactCard">
+          <div class="contact-avatar"><i class="fa-solid fa-user-shield"></i></div>
+          <div class="contact-details">
+            <h4 class="contact-nombre" id="contactNombreText">Sin contacto</h4>
+            <span class="contact-relacion-badge" id="contactRelacionText">Familiar</span>
+            <div class="contact-row">
               <i class="fa-solid fa-phone"></i>
-              <span>Llamar Familiar</span>
-            </button>
-            <button class="btn-quick btn-share-location" id="btnShareLocationQuick">
-              <i class="fa-solid fa-share-nodes"></i>
-              <span>Compartir Ubicación</span>
-            </button>
-          </div>
-        </section>
-
-
-        <!-- ==================== VIEW 2: CONTACTOS (Adulto Mayor) ==================== -->
-        <section class="app-view" id="view-contactos">
-          <div class="card-title-section">
-            <h3><i class="fa-solid fa-address-book"></i> Contacto de Emergencia</h3>
-            <p>Este familiar será notificado automáticamente al presionar el botón SOS o salir de la zona segura.</p>
-          </div>
-
-          <div class="contact-card" id="contactCard">
-            <div class="contact-avatar">
-              <i class="fa-solid fa-user-shield"></i>
+              <span id="contactTelefonoText">Sin teléfono configurado</span>
             </div>
-            <div class="contact-info">
-              <h4 id="contactNameText">No configurado</h4>
-              <p><span class="badge-rel" id="contactRelText">Familiar</span></p>
-              <div class="contact-detail-row">
-                <i class="fa-solid fa-phone"></i>
-                <span id="contactPhoneText">Sin teléfono</span>
-              </div>
-              <div class="contact-detail-row">
-                <i class="fa-solid fa-envelope"></i>
-                <span id="contactEmailText">Sin correo</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Action buttons for the contact -->
-          <div class="contact-actions">
-            <a href="#" class="btn-contact-action btn-call" id="btnContactCall">
-              <i class="fa-solid fa-phone"></i> Llamar Familiar
-            </a>
-            <button class="btn-contact-action btn-message" id="btnContactMessage">
-              <i class="fa-solid fa-comment-sms"></i> Enviar Mensaje
-            </button>
-          </div>
-
-          <!-- Manage Contact Form -->
-          <div class="manage-contact-form">
-            <div class="form-title">
-              <h5><i class="fa-solid fa-user-pen"></i> Actualizar Contacto</h5>
-            </div>
-            <form id="contactForm">
-              <div class="form-group-grid">
-                <div class="form-group">
-                  <label for="contactName">Nombre Completo:</label>
-                  <input type="text" id="contactName" required placeholder="Ej: María Pérez (Hija)">
-                </div>
-                <div class="form-group">
-                  <label for="contactPhone">Teléfono Móvil:</label>
-                  <input type="tel" id="contactPhone" required placeholder="Ej: +593 99 123 4567">
-                </div>
-              </div>
-              <div class="form-group-grid">
-                <div class="form-group">
-                  <label for="contactRelationship">Relación / Parentesco:</label>
-                  <input type="text" id="contactRelationship" placeholder="Ej: Hija, Hijo, Cónyuge">
-                </div>
-                <div class="form-group">
-                  <label for="contactEmail">Correo Electrónico:</label>
-                  <input type="email" id="contactEmail" placeholder="Ej: maria@ejemplo.com">
-                </div>
-              </div>
-              <button type="submit" class="btn-save-contact">
-                <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
-              </button>
-            </form>
-          </div>
-        </section>
-
-
-        <!-- ==================== VIEW 3: RUTAS Y LUGARES (Familiar/Admin) ==================== -->
-        <section class="app-view" id="view-rutas">
-          <div class="card-title-section">
-            <h3><i class="fa-solid fa-route"></i> Ruta de Emergencia y Rescate</h3>
-            <p>Visualiza el camino más rápido entre tu ubicación y la del adulto mayor.</p>
-          </div>
-
-          <!-- Route Info Dashboard -->
-          <div class="route-dashboard">
-            <div class="route-metric">
-              <span class="metric-label">Distancia</span>
-              <span class="metric-value" id="routeDistanceText">0.0 km</span>
-            </div>
-            <div class="route-metric">
-              <span class="metric-label">Tiempo Estimado</span>
-              <span class="metric-value highlight" id="routeDurationText">0 min</span>
-            </div>
-          </div>
-
-          <!-- Rescuing Map -->
-          <div class="map-card">
-            <div class="map-container-routes" id="map-routes">
-              <div class="map-placeholder">Cargando mapa de ruta...</div>
-            </div>
-          </div>
-
-          <!-- Nearby Places Finder Section -->
-          <div class="nearby-places-section">
-            <div class="places-header">
-              <h4><i class="fa-solid fa-hospital"></i> Servicios Cercanos (&lt; 2000m)</h4>
-              <span class="places-sub">Hospitales, farmacias y centros de ayuda</span>
-            </div>
-
-            <!-- Category Tabs -->
-            <div class="places-tabs">
-              <button class="place-tab-btn active" data-category="all">Todos</button>
-              <button class="place-tab-btn" data-category="hospital"><i class="fa-solid fa-truck-medical"></i> Hosp.</button>
-              <button class="place-tab-btn" data-category="pharmacy"><i class="fa-solid fa-pills"></i> Farm.</button>
-              <button class="place-tab-btn" data-category="help_center"><i class="fa-solid fa-handshake-angle"></i> Apoyo</button>
-            </div>
-
-            <!-- Places List -->
-            <div class="places-list" id="placesList">
-              <!-- Dynamically populated -->
-              <div class="empty-state">Buscando servicios de emergencia cercanos...</div>
-            </div>
-          </div>
-        </section>
-
-
-        <!-- ==================== VIEW 4: HISTORIAL (Familiar/Admin) ==================== -->
-        <section class="app-view" id="view-historial">
-          <div class="card-title-section">
-            <h3><i class="fa-solid fa-clock-rotate-left"></i> Historial de Alertas</h3>
-            <p>Registro de alertas de pánico (SOS) y salidas de la zona segura del adulto mayor.</p>
-          </div>
-
-          <!-- Alert History List -->
-          <div class="history-list" id="historyList">
-            <!-- Dynamically populated -->
-            <div class="empty-state">No se registran alertas anteriores.</div>
-          </div>
-        </section>
-
-      </div> <!-- End view-viewport -->
-
-      <!-- Bottom Navigation Menu (Maximum 5 items, currently 4: Inicio, Contacto, Rutas/Lugares, Historial) -->
-      <nav class="bottom-nav" id="bottomNav">
-        
-        <!-- Client View Tabs (Visible to Adult) -->
-        <button class="nav-item active" data-target="view-inicio" id="navItemInicio">
-          <i class="fa-solid fa-house-medical"></i>
-          <span>Inicio</span>
-        </button>
-        
-        <button class="nav-item" data-target="view-contactos" id="navItemContactos">
-          <i class="fa-solid fa-address-book"></i>
-          <span>Contacto</span>
-        </button>
-        
-        <!-- Administrator View Tabs (Normally for Familiar/Admin) -->
-        <button class="nav-item" data-target="view-rutas" id="navItemRutas">
-          <i class="fa-solid fa-map-location-dot"></i>
-          <span>Rutas</span>
-        </button>
-
-        <button class="nav-item" data-target="view-historial" id="navItemHistorial">
-          <i class="fa-solid fa-bell"></i>
-          <span>Historial</span>
-        </button>
-        
-      </nav>
-
-      <!-- ==================== OVERLAY 1: SOS CONFIRMATION ==================== -->
-      <div class="overlay" id="sosConfirmOverlay">
-        <div class="overlay-card confirm-card">
-          <div class="confirm-header">
-            <div class="sos-warning-icon">
-              <i class="fa-solid fa-triangle-exclamation"></i>
-            </div>
-            <h2>Confirmar SOS</h2>
-            <p class="confirm-message">¿Necesitas ayuda de inmediato? Se enviará una alerta a tu familiar de emergencia.</p>
-          </div>
-          
-          <div class="countdown-circle">
-            <svg class="countdown-svg" viewBox="0 0 100 100">
-              <circle class="countdown-bg" cx="50" cy="50" r="45"></circle>
-              <circle class="countdown-bar" id="countdownBar" cx="50" cy="50" r="45"></circle>
-            </svg>
-            <span class="countdown-text" id="countdownNumber">5</span>
-          </div>
-
-          <div class="confirm-actions">
-            <button class="btn-confirm-action btn-send-now" id="btnSosConfirmSend">
-              <i class="fa-solid fa-circle-check"></i> SÍ, ENVIAR AHORA
-            </button>
-            <button class="btn-confirm-action btn-cancel-now" id="btnSosConfirmCancel">
-              CANCELAR (<span id="cancelSec">5s</span>)
-            </button>
           </div>
         </div>
-      </div>
 
-      <!-- ==================== OVERLAY 2: SOS SUCCESS SCREEN ==================== -->
-      <div class="overlay" id="sosSuccessOverlay">
-        <div class="overlay-card success-card">
-          <div class="success-icon-container">
-            <div class="success-ring"></div>
-            <i class="fa-solid fa-check checkmark-icon"></i>
-          </div>
-          <h2>Alerta SOS Enviada</h2>
-          <p class="success-msg-text">Tu familiar ha sido notificado con éxito de tu emergencia y ubicación.</p>
-          
-          <div class="notified-contact-box">
-            <span class="box-label">Contacto Notificado:</span>
-            <span class="box-name" id="successContactName">María Pérez (Hija)</span>
-            <span class="box-phone" id="successContactPhone">+593 99 123 4567</span>
-          </div>
+        <!-- Botones de acción grandes -->
+        <div class="contact-actions">
+          <a href="#" class="btn-action-full btn-green" id="btnContactLlamar">
+            <i class="fa-solid fa-phone"></i> Llamar al familiar
+          </a>
+          <button class="btn-action-full btn-dark" id="btnContactMensaje">
+            <i class="fa-solid fa-comment-sms"></i> Enviar mensaje
+          </button>
+        </div>
 
-          <button class="btn-success-close" id="btnSosSuccessClose">
-            Entendido, volver al Inicio
+        <!-- Formulario para actualizar el contacto -->
+        <div class="form-card">
+          <h5><i class="fa-solid fa-user-pen"></i> Actualizar contacto</h5>
+          <form id="contactForm">
+            <div class="form-group">
+              <label for="formNombre">Nombre completo:</label>
+              <input type="text" id="formNombre" required placeholder="Ej: María Pérez">
+            </div>
+            <div class="form-group">
+              <label for="formTelefono">Teléfono:</label>
+              <input type="tel" id="formTelefono" required placeholder="Ej: +593 99 123 4567">
+            </div>
+            <div class="form-group">
+              <label for="formRelacion">Relación:</label>
+              <input type="text" id="formRelacion" placeholder="Ej: Hija, Hijo, Cónyuge">
+            </div>
+            <button type="submit" class="btn-save">
+              <i class="fa-solid fa-floppy-disk"></i> Guardar
+            </button>
+          </form>
+        </div>
+      </section>
+
+
+      <!-- ============================================================
+           PANTALLA 3 — Ruta de ayuda (para el familiar/admin)
+           Campos: Origen / Destino / Distancia / Tiempo estimado /
+                   Ruta (mapa) / Botón iniciar navegación
+           ============================================================ -->
+      <section class="app-view" id="view-rutas">
+        <div class="section-title">
+          <h3><i class="fa-solid fa-route"></i> Ruta de Ayuda</h3>
+          <p>Ruta más rápida desde tu ubicación hasta el adulto mayor.</p>
+        </div>
+
+        <!-- Métricas de la ruta -->
+        <div class="route-metrics">
+          <div class="metric-item">
+            <span class="metric-label">Origen</span>
+            <span class="metric-val small" id="routeOrigenText">Tu ubicación</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Destino</span>
+            <span class="metric-val small" id="routeDestinoText">Adulto mayor</span>
+          </div>
+          <div class="metric-item highlight-item">
+            <span class="metric-label">Distancia</span>
+            <span class="metric-val" id="routeDistanciaText">-- km</span>
+          </div>
+          <div class="metric-item highlight-item">
+            <span class="metric-label">Tiempo estimado</span>
+            <span class="metric-val accent" id="routeDuracionText">-- min</span>
+          </div>
+        </div>
+
+        <!-- Mapa de la ruta -->
+        <div class="map-card">
+          <div class="map-container-routes" id="map-routes">
+            <div class="map-placeholder"><i class="fa-solid fa-spinner fa-spin"></i> Cargando ruta...</div>
+          </div>
+        </div>
+
+        <!-- Botón Iniciar Navegación -->
+        <button class="btn-nav-start" id="btnIniciarNavegacion">
+          <i class="fa-solid fa-diamond-turn-right"></i> Iniciar Navegación
+        </button>
+
+      </section>
+
+
+      <!-- ============================================================
+           PANTALLA 4 — Lugares cercanos
+           Categorías: Hospitales / Farmacias / Centros de salud /
+                       Policía / Puntos de ayuda
+           ============================================================ -->
+      <section class="app-view" id="view-lugares">
+        <div class="section-title">
+          <h3><i class="fa-solid fa-hospital"></i> Lugares Cercanos</h3>
+          <p>Servicios de emergencia en un radio de 2000 m.</p>
+        </div>
+
+        <!-- Filtros de categoría -->
+        <div class="cat-tabs">
+          <button class="cat-tab active" data-cat="todos">Todos</button>
+          <button class="cat-tab" data-cat="hospital">
+            <i class="fa-solid fa-truck-medical"></i> Hospitales
+          </button>
+          <button class="cat-tab" data-cat="farmacia">
+            <i class="fa-solid fa-pills"></i> Farmacias
+          </button>
+          <button class="cat-tab" data-cat="centro_salud">
+            <i class="fa-solid fa-heart-pulse"></i> C. Salud
+          </button>
+          <button class="cat-tab" data-cat="policia">
+            <i class="fa-solid fa-shield-halved"></i> Policía
+          </button>
+          <button class="cat-tab" data-cat="punto_ayuda">
+            <i class="fa-solid fa-handshake-angle"></i> Apoyo
+          </button>
+        </div>
+
+        <!-- Lista de lugares -->
+        <div class="places-list" id="placesList">
+          <div class="empty-state">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            Buscando servicios de emergencia...
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- ============================================================
+           PANTALLA 5 — Historial de alertas
+           Campos: Fecha / Hora / Tipo / Ubicación / Estado
+           ============================================================ -->
+      <section class="app-view" id="view-historial">
+        <div class="section-title">
+          <h3><i class="fa-solid fa-clock-rotate-left"></i> Historial de Alertas</h3>
+          <p>Registro de alertas SOS y salidas de zona segura.</p>
+        </div>
+
+        <!-- Selector de estado para filtrar -->
+        <div class="filter-row">
+          <label for="historialFiltro">Filtrar por estado:</label>
+          <select id="historialFiltro">
+            <option value="todos">Todos</option>
+            <option value="NUEVA">NUEVA</option>
+            <option value="VISTA">VISTA</option>
+            <option value="ATENDIDA">ATENDIDA</option>
+            <option value="CERRADA">CERRADA</option>
+          </select>
+        </div>
+
+        <div class="history-list" id="historyList">
+          <div class="empty-state">
+            <i class="fa-solid fa-bell-slash"></i>
+            Sin alertas registradas.
+          </div>
+        </div>
+      </section>
+
+
+    </div><!-- /view-viewport -->
+
+
+    <!-- ============================================================
+         BARRA DE NAVEGACIÓN INFERIOR (máximo 5 opciones)
+         Inicio | Contacto | Rutas | Lugares | Historial
+         ============================================================ -->
+    <nav class="bottom-nav" id="bottomNav">
+      <button class="nav-btn active" data-view="view-inicio" id="nav-inicio">
+        <i class="fa-solid fa-house-medical"></i>
+        <span>Inicio</span>
+      </button>
+      <button class="nav-btn" data-view="view-contacto" id="nav-contacto">
+        <i class="fa-solid fa-address-book"></i>
+        <span>Contacto</span>
+      </button>
+      <button class="nav-btn" data-view="view-rutas" id="nav-rutas">
+        <i class="fa-solid fa-route"></i>
+        <span>Rutas</span>
+      </button>
+      <button class="nav-btn" data-view="view-lugares" id="nav-lugares">
+        <i class="fa-solid fa-map-marker-alt"></i>
+        <span>Lugares</span>
+      </button>
+      <button class="nav-btn" data-view="view-historial" id="nav-historial">
+        <i class="fa-solid fa-bell"></i>
+        <span>Historial</span>
+      </button>
+    </nav>
+
+
+    <!-- ============================================================
+         OVERLAY 1 — Confirmación de SOS (Pantalla 2 del plan)
+         "¿Desea enviar una alerta SOS? / Cancelar / Enviar alerta"
+         ============================================================ -->
+    <div class="overlay" id="overlaySosConfirm">
+      <div class="overlay-box confirm-box">
+        <div class="confirm-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <h2>¿Desea enviar<br>una alerta SOS?</h2>
+        <p class="confirm-subtext">Se notificará a su familiar de emergencia con su ubicación actual.</p>
+
+        <div class="countdown-wrapper">
+          <svg class="countdown-svg" viewBox="0 0 100 100">
+            <circle class="cd-bg" cx="50" cy="50" r="44"></circle>
+            <circle class="cd-bar" id="countdownBar" cx="50" cy="50" r="44"></circle>
+          </svg>
+          <span class="cd-number" id="countdownNumber">5</span>
+        </div>
+
+        <div class="confirm-buttons">
+          <button class="btn-confirm-send" id="btnSosEnviar">
+            <i class="fa-solid fa-circle-check"></i> Enviar alerta
+          </button>
+          <button class="btn-confirm-cancel" id="btnSosCancelar">
+            Cancelar (<span id="cdSec">5</span>s)
           </button>
         </div>
       </div>
+    </div>
 
-      <!-- Top Role Switcher Widget (For grader / test demonstration) -->
-      <div class="role-switcher-banner">
-        <span>Rol Activo: <strong id="activeRoleText">Adulto Mayor</strong></span>
-        <button id="btnToggleRole" class="btn-toggle-role">Cambiar a Familiar</button>
+
+    <!-- ============================================================
+         OVERLAY 2 — Alerta enviada (Pantalla 3 del plan)
+         "Alerta enviada correctamente. Su familiar ha sido notificado."
+         ============================================================ -->
+    <div class="overlay" id="overlaySOSSuccess">
+      <div class="overlay-box success-box">
+        <div class="success-icon-wrap">
+          <span class="success-ring-anim"></span>
+          <i class="fa-solid fa-check success-check"></i>
+        </div>
+        <h2>Alerta enviada<br>correctamente.</h2>
+        <p class="success-subtext">Su familiar ha sido notificado.</p>
+
+        <div class="notif-box">
+          <span class="notif-label">Contacto notificado:</span>
+          <span class="notif-nombre" id="successNombre">—</span>
+          <span class="notif-tel" id="successTelefono">—</span>
+        </div>
+
+        <div class="success-actions">
+          <button class="btn-action-full btn-green" id="btnSosLlamar">
+            <i class="fa-solid fa-phone"></i> Llamar al familiar
+          </button>
+          <button class="btn-action-full btn-dark" id="btnSosCompartir">
+            <i class="fa-solid fa-share-nodes"></i> Compartir ubicación
+          </button>
+          <button class="btn-success-close" id="btnSosSuccessClose">
+            Volver al inicio
+          </button>
+        </div>
       </div>
+    </div>
 
-    </main>
 
-  </div> <!-- End App Layout -->
+    <!-- Banner de rol activo (para demostración) -->
+    <div class="role-banner">
+      <span>Rol: <strong id="rolActualText">Adulto Mayor</strong></span>
+      <button id="btnCambiarRol">Cambiar rol</button>
+    </div>
 
-  <!-- Leaflet Map JS (Fallback) -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  
-  <!-- App JavaScript logic -->
-  <script src="app.js"></script>
+  </main><!-- /phone-frame -->
+
+</div><!-- /app-layout -->
+
+<!-- Leaflet JS (fallback sin Google Maps Key) -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="app.js"></script>
 </body>
 </html>

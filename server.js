@@ -1,449 +1,448 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const db = require('./db');
+const cors    = require('cors');
+const path    = require('path');
+const db      = require('./db');
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-
-// Serve static frontend files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Developer Simulation State (In-Memory default, synced with db where applicable)
+// ============================================================
+// ESTADO DE SIMULACIÓN (en memoria, mientras los módulos de
+// Ismael y Mauricio no estén listos — usar datos simulados)
+// ============================================================
+
+// Simula lo que entrega Ismael (Autenticación)
 let simulatedSession = {
-  adultId: "adult-123",
-  name: "Juan Salvador",
-  id_administrador: "admin-456"
+  adultId:          1,
+  nombre:           "Juan Salvador",
+  id_administrador: 10
 };
 
+// Simula lo que entrega Mauricio (Ubicación + Geofencing)
+// Respeta el contrato: adultId, latitude, longitude, estadoZona
 let simulatedLocation = {
-  adultId: "adult-123",
-  latitude: -0.180653,
-  longitude: -78.467834,
-  zone_status: "DENTRO_DE_ZONA"
+  adultId:    1,
+  latitude:   -0.180653,
+  longitude:  -78.467834,
+  estadoZona: "DENTRO_DE_ZONA"   // FUERA_DE_ZONA | DENTRO_DE_ZONA
 };
 
-// Emergency contact fallback memory state if sqlite3 is not writeable, 
-// but db.js handles upserts perfectly.
+// Ubicación simulada del familiar (para calcular ruta de rescate)
+let familiarLocation = {
+  latitude:  -0.188553,
+  longitude: -78.480834
+};
 
-// --- REST API ENDPOINTS ---
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
 
-// GET config status (checks if Google Maps API key is present)
 app.get('/api/config', (req, res) => {
-  const apiKey = process.env.GOOGLE_API_KEY;
-  const hasKey = apiKey && !apiKey.includes('tu_api_key_aqui') && apiKey.trim() !== '';
-  res.json({ 
-    hasGoogleMapsKey: !!hasKey,
-    googleApiKey: hasKey ? apiKey : null
-  });
-});
-
-// GET current simulation state (Developer use)
-app.get('/api/simulation/state', (req, res) => {
+  const key    = process.env.GOOGLE_API_KEY;
+  const hasKey = key && !key.includes('tu_api_key_aqui') && key.trim() !== '';
   res.json({
-    session: simulatedSession,
-    location: simulatedLocation
+    hasGoogleMapsKey: !!hasKey,
+    googleApiKey:     hasKey ? key : null
   });
 });
 
-// POST update simulation session (Simulates Ismael's Auth)
-app.post('/api/simulation/session', (req, res) => {
-  const { adultId, name, id_administrador } = req.body;
-  if (!adultId || !name) {
-    return res.status(400).json({ error: "Missing adultId or name" });
-  }
-  simulatedSession = { adultId, name, id_administrador: id_administrador || "admin-456" };
-  res.json({ message: "Session updated successfully", session: simulatedSession });
+// ============================================================
+// SIMULACIÓN — endpoints para el panel de desarrollador
+// ============================================================
+
+// GET estado actual de la simulación
+app.get('/api/simulation/state', (req, res) => {
+  res.json({ session: simulatedSession, location: simulatedLocation, familiar: familiarLocation });
 });
 
-// POST update simulation location (Simulates Mauricio's GPS tracking)
+// POST actualiza sesión (simula módulo de Ismael)
+// Contrato: { adultId, nombre, id_administrador }
+app.post('/api/simulation/session', (req, res) => {
+  const { adultId, nombre, id_administrador } = req.body;
+  if (!adultId || !nombre) {
+    return res.status(400).json({ error: "Faltan adultId o nombre" });
+  }
+  simulatedSession = {
+    adultId:          parseInt(adultId),
+    nombre,
+    id_administrador: parseInt(id_administrador) || 10
+  };
+  res.json({ message: "Sesión actualizada", session: simulatedSession });
+});
+
+// POST actualiza ubicación (simula módulo de Mauricio)
+// Contrato: { adultId, latitude, longitude, estadoZona }
 app.post('/api/simulation/location', async (req, res) => {
-  const { adultId, latitude, longitude, zone_status } = req.body;
+  const { adultId, latitude, longitude, estadoZona } = req.body;
   if (!adultId || latitude === undefined || longitude === undefined) {
-    return res.status(400).json({ error: "Missing adultId, latitude, or longitude" });
+    return res.status(400).json({ error: "Faltan adultId, latitude o longitude" });
   }
 
-  const previousStatus = simulatedLocation.zone_status;
+  const estadoAnterior = simulatedLocation.estadoZona;
   simulatedLocation = {
-    adultId,
-    latitude: parseFloat(latitude),
-    longitude: parseFloat(longitude),
-    zone_status: zone_status || "DENTRO_DE_ZONA"
+    adultId:    parseInt(adultId),
+    latitude:   parseFloat(latitude),
+    longitude:  parseFloat(longitude),
+    estadoZona: estadoZona || "DENTRO_DE_ZONA"
   };
 
-  let autoCreatedAlert = null;
-  // If the status changes to FUERA_DE_ZONA, trigger an automatic Out-of-Zone alert!
-  if (simulatedLocation.zone_status === "FUERA_DE_ZONA" && previousStatus !== "FUERA_DE_ZONA") {
+  let alertaCreada = null;
+
+  // Si cambia a FUERA_DE_ZONA, el sistema registra automáticamente la alerta
+  if (simulatedLocation.estadoZona === "FUERA_DE_ZONA" && estadoAnterior !== "FUERA_DE_ZONA") {
     try {
-      autoCreatedAlert = await db.createAlert(
-        adultId,
-        "FUERA_DE_ZONA",
+      alertaCreada = await db.createAlert(
+        adultId, "FUERA_DE_ZONA",
         simulatedLocation.latitude,
         simulatedLocation.longitude,
-        "active"
+        "NUEVA"
       );
-      console.log(`[Simulation] Automatic FUERA_DE_ZONA alert created for ${adultId}`);
+      console.log(`[Simulación] Alerta FUERA_DE_ZONA creada automáticamente para adultId=${adultId}`);
     } catch (err) {
-      console.error("Failed to automatically create out-of-zone alert:", err);
+      console.error("Error creando alerta automática:", err);
     }
   }
 
-  res.json({
-    message: "Location and zone status updated successfully",
-    location: simulatedLocation,
-    alertCreated: autoCreatedAlert
-  });
+  res.json({ message: "Ubicación actualizada", location: simulatedLocation, alertaCreada });
 });
 
-// GET alert history for a specific adult (Juan's module)
+// POST actualiza ubicación del familiar (para cálculo de rutas)
+app.post('/api/simulation/familiar', (req, res) => {
+  const { latitude, longitude } = req.body;
+  if (latitude === undefined || longitude === undefined) {
+    return res.status(400).json({ error: "Faltan latitude o longitude" });
+  }
+  familiarLocation = { latitude: parseFloat(latitude), longitude: parseFloat(longitude) };
+  res.json({ message: "Ubicación del familiar actualizada", familiar: familiarLocation });
+});
+
+// ============================================================
+// ALERTAS
+// Contrato de campos: id_alerta, id_adulto, tipo, fecha, hora,
+//                     latitude, longitude, estado
+// Estados válidos: NUEVA | VISTA | ATENDIDA | CERRADA
+// ============================================================
+
+// POST /api/alerts — crear alerta
+// Body: { adultId, tipo, latitude, longitude, estado? }
+app.post('/api/alerts', async (req, res) => {
+  const { adultId, tipo, latitude, longitude, estado } = req.body;
+  if (!adultId || !tipo || latitude === undefined || longitude === undefined) {
+    return res.status(400).json({
+      error: "Faltan campos requeridos: adultId, tipo, latitude, longitude"
+    });
+  }
+  const tiposValidos = ['SOS', 'FUERA_DE_ZONA'];
+  if (!tiposValidos.includes(tipo)) {
+    return res.status(400).json({ error: `Tipo inválido. Valores válidos: ${tiposValidos.join(', ')}` });
+  }
+  try {
+    const alerta = await db.createAlert(adultId, tipo, latitude, longitude, estado || 'NUEVA');
+    res.status(201).json({ message: "Alerta creada", alerta });
+  } catch (err) {
+    res.status(500).json({ error: "Error al crear alerta", detalle: err.message });
+  }
+});
+
+// GET /api/alerts/:adultId — historial de alertas
 app.get('/api/alerts/:adultId', async (req, res) => {
   try {
-    const alerts = await db.getAlertsByAdult(req.params.adultId);
-    res.json(alerts);
+    const alertas = await db.getAlertsByAdult(req.params.adultId);
+    res.json(alertas);
   } catch (err) {
-    res.status(500).json({ error: "Failed to retrieve alerts", details: err.message });
+    res.status(500).json({ error: "Error al consultar alertas", detalle: err.message });
   }
 });
 
-// POST create a new alert (Juan's module / triggered by SOS button)
-app.post('/api/alerts', async (req, res) => {
-  const { adultId, type, latitude, longitude } = req.body;
-  if (!adultId || !type || latitude === undefined || longitude === undefined) {
-    return res.status(400).json({ error: "Missing required fields (adultId, type, latitude, longitude)" });
+// PUT /api/alerts/:id/status — actualizar estado
+// Body: { estado: "VISTA" | "ATENDIDA" | "CERRADA" }
+app.put('/api/alerts/:id/status', async (req, res) => {
+  const { estado } = req.body;
+  if (!estado) {
+    return res.status(400).json({ error: "Falta el campo 'estado'" });
   }
-
   try {
-    const alert = await db.createAlert(adultId, type, latitude, longitude, 'active');
-    res.status(201).json({ message: "Alert created successfully", alert });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to create alert", details: err.message });
-  }
-});
-
-// PUT resolve an alert (Juan's module)
-app.put('/api/alerts/:alertId/resolve', async (req, res) => {
-  try {
-    const resolved = await db.resolveAlert(req.params.alertId);
-    if (resolved) {
-      res.json({ message: "Alert resolved successfully" });
+    const actualizado = await db.updateAlertStatus(req.params.id, estado);
+    if (actualizado) {
+      res.json({ message: `Estado de alerta actualizado a '${estado}'` });
     } else {
-      res.status(404).json({ error: "Alert not found or already resolved" });
+      res.status(404).json({ error: "Alerta no encontrada" });
     }
   } catch (err) {
-    res.status(500).json({ error: "Failed to resolve alert", details: err.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
-// GET emergency contacts for an adult (Juan's module)
+// ============================================================
+// CONTACTOS DE EMERGENCIA
+// Contrato: id_contacto, id_adulto, nombre, telefono, relacion
+// ============================================================
+
+// GET /api/contacts/:adultId
 app.get('/api/contacts/:adultId', async (req, res) => {
   try {
-    const contacts = await db.getContactsByAdult(req.params.adultId);
-    res.json(contacts);
+    const contactos = await db.getContactsByAdult(req.params.adultId);
+    res.json(contactos);
   } catch (err) {
-    res.status(500).json({ error: "Failed to retrieve contacts", details: err.message });
+    res.status(500).json({ error: "Error al consultar contactos", detalle: err.message });
   }
 });
 
-// POST add/update emergency contact (Juan's module)
+// POST /api/contacts — crear/actualizar contacto
+// Body: { adultId, nombre, telefono, relacion }
 app.post('/api/contacts', async (req, res) => {
-  const { adultId, name, phone, relationship, email } = req.body;
-  if (!adultId || !name || !phone) {
-    return res.status(400).json({ error: "Missing required fields (adultId, name, phone)" });
+  const { adultId, nombre, telefono, relacion } = req.body;
+  if (!adultId || !nombre || !telefono) {
+    return res.status(400).json({ error: "Faltan campos: adultId, nombre, telefono" });
   }
-
   try {
-    await db.upsertContact(adultId, name, phone, relationship || "", email || "");
-    res.json({ message: "Emergency contact saved successfully" });
+    await db.upsertContact(adultId, nombre, telefono, relacion || "");
+    res.json({ message: "Contacto de emergencia guardado correctamente" });
   } catch (err) {
-    res.status(500).json({ error: "Failed to save emergency contact", details: err.message });
+    res.status(500).json({ error: "Error al guardar contacto", detalle: err.message });
   }
 });
 
-// Helper for Haversine Distance (in meters)
-function getHaversineDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371e3; // Earth's radius in meters
-  const phi1 = lat1 * Math.PI / 180;
-  const phi2 = lat2 * Math.PI / 180;
-  const deltaPhi = (lat2 - lat1) * Math.PI / 180;
-  const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+// ============================================================
+// UTILIDADES
+// ============================================================
 
-  const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-            Math.cos(phi1) * Math.cos(phi2) *
-            Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c; // in meters
+// Distancia Haversine en metros
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const p1 = lat1 * Math.PI / 180;
+  const p2 = lat2 * Math.PI / 180;
+  const dp = (lat2 - lat1) * Math.PI / 180;
+  const dl = (lon2 - lon1) * Math.PI / 180;
+  const a  = Math.sin(dp/2)**2 + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// POST calculate route (Juan's module, calls Google Routes API)
-app.post('/api/routes/calculate', async (req, res) => {
-  const { origin, destination } = req.body; // {lat, lng}
-  if (!origin || !destination || origin.lat === undefined || origin.lng === undefined || destination.lat === undefined || destination.lng === undefined) {
-    return res.status(400).json({ error: "Missing origin or destination coordinates" });
+// ============================================================
+// RUTAS — POST /api/routes
+// Llama a Google Routes API v2 y retorna distancia, duración y
+// polyline para dibujar en Maps SDK
+// ============================================================
+app.post('/api/routes', async (req, res) => {
+  const { origin, destination } = req.body;
+  if (!origin?.lat || !origin?.lng || !destination?.lat || !destination?.lng) {
+    return res.status(400).json({
+      error: "Faltan origin {lat,lng} o destination {lat,lng}"
+    });
   }
 
-  const apiKey = process.env.GOOGLE_API_KEY;
+  const key = process.env.GOOGLE_API_KEY;
+  const hasKey = key && !key.includes('tu_api_key_aqui') && key.trim() !== '';
 
-  if (!apiKey || apiKey.includes('tu_api_key_aqui') || apiKey.trim() === '') {
-    // Return a mocked route if there is no API key
-    console.log("[Routes API] Using mock route calculation (No API Key).");
-    const distanceMeters = Math.round(getHaversineDistance(origin.lat, origin.lng, destination.lat, destination.lng));
-    // Assume average speed 30km/h (8.33 m/s)
-    const durationSeconds = Math.round(distanceMeters / 8.33);
-
-    // Create a mock polyline (for Leaflet fallback we just return list of coords, but we also send a simulated path)
-    const mockCoordinates = [
-      [origin.lat, origin.lng],
-      [(origin.lat + destination.lat) / 2 + 0.001, (origin.lng + destination.lng) / 2 - 0.001], // add a slight bend
-      [destination.lat, destination.lng]
-    ];
-
+  if (!hasKey) {
+    // Mock — usa Haversine y devuelve polyline simple para Leaflet
+    const distM = Math.round(haversine(origin.lat, origin.lng, destination.lat, destination.lng));
+    const durSeg = Math.round(distM / 8.33); // ~30 km/h
     return res.json({
       isMock: true,
-      distance: `${(distanceMeters / 1000).toFixed(2)} km`,
-      distanceMeters,
-      duration: `${Math.round(durationSeconds / 60)} min`,
-      durationSeconds,
-      polyline: {
-        encodedPolyline: "" // Google Maps encoded polyline
-      },
-      coordinates: mockCoordinates // Simple coordinate list for Leaflet
+      distancia: `${(distM / 1000).toFixed(2)} km`,
+      distanciaMetros: distM,
+      duracion: `${Math.round(durSeg / 60)} min`,
+      duracionSegundos: durSeg,
+      polyline: { encodedPolyline: "" },
+      coordenadas: [
+        [origin.lat, origin.lng],
+        [(origin.lat + destination.lat) / 2 + 0.001, (origin.lng + destination.lng) / 2 - 0.001],
+        [destination.lat, destination.lng]
+      ]
     });
   }
 
   try {
-    const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
-    const response = await fetch(url, {
+    const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
+        "X-Goog-Api-Key": key,
         "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline"
       },
       body: JSON.stringify({
-        origin: {
-          location: {
-            latLng: {
-              latitude: parseFloat(origin.lat),
-              longitude: parseFloat(origin.lng)
-            }
-          }
-        },
-        destination: {
-          location: {
-            latLng: {
-              latitude: parseFloat(destination.lat),
-              longitude: parseFloat(destination.lng)
-            }
-          }
-        },
+        origin:      { location: { latLng: { latitude: parseFloat(origin.lat), longitude: parseFloat(origin.lng) } } },
+        destination: { location: { latLng: { latitude: parseFloat(destination.lat), longitude: parseFloat(destination.lng) } } },
         travelMode: "DRIVE"
       })
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Google API returned status ${response.status}: ${errorText}`);
-    }
-
+    if (!response.ok) throw new Error(`Google Routes API: ${response.status} ${await response.text()}`);
     const data = await response.json();
-    if (!data.routes || data.routes.length === 0) {
-      throw new Error("No routes found from Google API");
-    }
+    if (!data.routes?.length) throw new Error("No se encontraron rutas");
 
-    const route = data.routes[0];
-    const distanceMeters = route.distanceMeters;
-    // duration comes like "450s" or "3200s", parse it
-    const durationSeconds = parseInt(route.duration.replace('s', ''));
+    const ruta = data.routes[0];
+    const distM  = ruta.distanceMeters;
+    const durSeg = parseInt(ruta.duration.replace('s', ''));
 
     res.json({
       isMock: false,
-      distance: `${(distanceMeters / 1000).toFixed(2)} km`,
-      distanceMeters,
-      duration: `${Math.round(durationSeconds / 60)} min`,
-      durationSeconds,
-      polyline: {
-        encodedPolyline: route.polyline.encodedPolyline
-      }
+      distancia: `${(distM / 1000).toFixed(2)} km`,
+      distanciaMetros: distM,
+      duracion: `${Math.round(durSeg / 60)} min`,
+      duracionSegundos: durSeg,
+      polyline: { encodedPolyline: ruta.polyline.encodedPolyline }
     });
   } catch (err) {
-    console.error("[Routes API Error] Falling back to mock route:", err.message);
-    const distanceMeters = Math.round(getHaversineDistance(origin.lat, origin.lng, destination.lat, destination.lng));
-    const durationSeconds = Math.round(distanceMeters / 8.33);
-    const mockCoordinates = [
-      [origin.lat, origin.lng],
-      [(origin.lat + destination.lat) / 2 + 0.001, (origin.lng + destination.lng) / 2 - 0.001],
-      [destination.lat, destination.lng]
-    ];
-
+    console.error("[Routes API] Fallback a mock:", err.message);
+    const distM = Math.round(haversine(origin.lat, origin.lng, destination.lat, destination.lng));
+    const durSeg = Math.round(distM / 8.33);
     res.json({
       isMock: true,
-      distance: `${(distanceMeters / 1000).toFixed(2)} km`,
-      distanceMeters,
-      duration: `${Math.round(durationSeconds / 60)} min`,
-      durationSeconds,
-      polyline: {
-        encodedPolyline: ""
-      },
-      coordinates: mockCoordinates
+      distancia: `${(distM / 1000).toFixed(2)} km`,
+      distanciaMetros: distM,
+      duracion: `${Math.round(durSeg / 60)} min`,
+      duracionSegundos: durSeg,
+      polyline: { encodedPolyline: "" },
+      coordenadas: [
+        [origin.lat, origin.lng],
+        [(origin.lat + destination.lat)/2 + 0.001, (origin.lng + destination.lng)/2 - 0.001],
+        [destination.lat, destination.lng]
+      ]
     });
   }
 });
 
-// GET search nearby places (Juan's module, calls Google Places API)
-app.get('/api/places/nearby', async (req, res) => {
-  const { latitude, longitude } = req.query;
+// ============================================================
+// LUGARES CERCANOS — POST /api/nearby-places
+// Busca hospitales, farmacias, centros de salud, policía y
+// puntos de ayuda en radio de 2000m (Google Places API)
+// ============================================================
+
+// Categorías soportadas con sus tipos de Google Places API
+const CATEGORY_TYPES = {
+  hospital:      ["hospital"],
+  farmacia:      ["pharmacy"],
+  centro_salud:  ["medical_clinic", "doctor", "dentist"],
+  policia:       ["police"],
+  punto_ayuda:   ["fire_station", "local_government_office"]
+};
+
+app.post('/api/nearby-places', async (req, res) => {
+  const { latitude, longitude, categoria } = req.body;
   if (latitude === undefined || longitude === undefined) {
-    return res.status(400).json({ error: "Missing latitude or longitude in query parameters" });
+    return res.status(400).json({ error: "Faltan latitude y longitude en el body" });
   }
 
   const lat = parseFloat(latitude);
   const lng = parseFloat(longitude);
-  const apiKey = process.env.GOOGLE_API_KEY;
+  const key = process.env.GOOGLE_API_KEY;
+  const hasKey = key && !key.includes('tu_api_key_aqui') && key.trim() !== '';
 
-  if (!apiKey || apiKey.includes('tu_api_key_aqui') || apiKey.trim() === '') {
-    return res.json(getMockPlaces(lat, lng));
+  if (!hasKey) {
+    return res.json(getMockPlaces(lat, lng, categoria));
   }
 
+  // Tipos a consultar según categoría seleccionada
+  const tipos = categoria && CATEGORY_TYPES[categoria]
+    ? CATEGORY_TYPES[categoria]
+    : [
+        "hospital", "pharmacy", "medical_clinic",
+        "police", "fire_station", "doctor"
+      ];
+
   try {
-    // New Google Places API - Search Nearby (v1)
-    const url = "https://places.googleapis.com/v1/places:searchNearby";
-    const response = await fetch(url, {
+    const response = await fetch("https://places.googleapis.com/v1/places:searchNearby", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
+        "X-Goog-Api-Key": key,
         "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.types"
       },
       body: JSON.stringify({
-        includedTypes: ["hospital", "pharmacy"],
+        includedTypes: tipos,
         maxResultCount: 15,
         locationRestriction: {
           circle: {
-            center: {
-              latitude: lat,
-              longitude: lng
-            },
+            center: { latitude: lat, longitude: lng },
             radius: 2000.0
           }
         }
       })
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Google API returned status ${response.status}: ${errorText}`);
-    }
-
+    if (!response.ok) throw new Error(`Google Places API: ${response.status} ${await response.text()}`);
     const data = await response.json();
-    if (!data.places || data.places.length === 0) {
-      return res.json(getMockPlaces(lat, lng));
-    }
 
-    // Format Places response to be consumed by Frontend
-    const places = data.places.map(place => {
-      let category = 'hospital';
-      if (place.types.includes('pharmacy')) {
-        category = 'pharmacy';
-      } else if (place.types.includes('hospital') || place.types.includes('medical_clinic') || place.types.includes('doctor')) {
-        category = 'hospital';
-      } else {
-        category = 'help_center';
-      }
+    if (!data.places?.length) return res.json(getMockPlaces(lat, lng, categoria));
+
+    const lugares = data.places.map(p => {
+      let cat = 'punto_ayuda';
+      const t = p.types || [];
+      if (t.includes('hospital'))       cat = 'hospital';
+      else if (t.includes('pharmacy'))  cat = 'farmacia';
+      else if (t.includes('medical_clinic') || t.includes('doctor')) cat = 'centro_salud';
+      else if (t.includes('police'))    cat = 'policia';
 
       return {
-        id: place.id,
-        name: place.displayName.text,
-        address: place.formattedAddress || "Dirección no disponible",
-        latitude: place.location.latitude,
-        longitude: place.location.longitude,
-        category,
-        distance: getHaversineDistance(lat, lng, place.location.latitude, place.location.longitude)
+        id:        p.id,
+        nombre:    p.displayName.text,
+        direccion: p.formattedAddress || "Dirección no disponible",
+        latitude:  p.location.latitude,
+        longitude: p.location.longitude,
+        categoria: cat,
+        distancia: Math.round(haversine(lat, lng, p.location.latitude, p.location.longitude))
       };
-    }).sort((a, b) => a.distance - b.distance);
+    })
+    .filter(l => l.distancia <= 2000)
+    .sort((a, b) => a.distancia - b.distancia);
 
-    res.json(places);
+    res.json(lugares);
   } catch (err) {
-    console.error("[Places API Error] Falling back to mock places:", err.message);
-    res.json(getMockPlaces(lat, lng));
+    console.error("[Places API] Fallback a mock:", err.message);
+    res.json(getMockPlaces(lat, lng, categoria));
   }
 });
 
-// Helper function to return simulated places near the adult's coordinates
-function getMockPlaces(lat, lng) {
-  console.log(`[Places API] Generating mock emergency places in a 2000m radius from (${lat}, ${lng})`);
-  const mockTemplates = [
-    {
-      name: "Hospital Metropolitano del Norte (Simulado)",
-      address: "Av. Occidental N45-12 y San Gabriel, Quito",
-      category: "hospital",
-      latOffset: 0.004,
-      lngOffset: -0.005
-    },
-    {
-      name: "Clínica de la Mujer y el Adulto Mayor (Simulado)",
-      address: "Calle de las Rosas E8-32, Quito",
-      category: "hospital",
-      latOffset: -0.003,
-      lngOffset: 0.006
-    },
-    {
-      name: "Farmacia Fybeca Cerca (Simulado)",
-      address: "Av. Amazonas y Eloy Alfaro, Quito",
-      category: "pharmacy",
-      latOffset: 0.001,
-      lngOffset: 0.002
-    },
-    {
-      name: "Farmacia SanaSana La Carolina (Simulado)",
-      address: "Av. República e Hipólito Aguirre, Quito",
-      category: "pharmacy",
-      latOffset: -0.002,
-      lngOffset: -0.001
-    },
-    {
-      name: "Centro de Apoyo y Cuidado del Adulto Mayor GAD (Simulado)",
-      address: "Pasaje Los Tulipanes N3-14, Quito",
-      category: "help_center",
-      latOffset: 0.007,
-      lngOffset: 0.003
-    },
-    {
-      name: "Punto de Auxilio Cruz Roja (Simulado)",
-      address: "Av. Gran Colombia y Tarqui, Quito",
-      category: "help_center",
-      latOffset: -0.006,
-      lngOffset: -0.004
-    }
+// Lugares simulados para todas las categorías del plan
+function getMockPlaces(lat, lng, categoriaFiltro) {
+  const templates = [
+    { nombre: "Hospital Eugenio Espejo (Simulado)",        direccion: "Av. Gran Colombia s/n, Quito",          categoria: "hospital",     latOff: 0.005,  lngOff: -0.004 },
+    { nombre: "Hospital Pablo Arturo Suárez (Simulado)",   direccion: "Av. 10 de Agosto N26-89, Quito",        categoria: "hospital",     latOff: -0.004, lngOff: 0.006  },
+    { nombre: "Farmacia Fybeca La Carolina (Simulado)",    direccion: "Av. Amazonas y Eloy Alfaro, Quito",     categoria: "farmacia",     latOff: 0.001,  lngOff: 0.002  },
+    { nombre: "Farmacia SanaSana Norte (Simulado)",        direccion: "Av. República e Hipólito Aguirre",      categoria: "farmacia",     latOff: -0.002, lngOff: -0.001 },
+    { nombre: "Centro de Salud La Vicentina (Simulado)",   direccion: "Pasaje Los Pinos N3-14, Quito",         categoria: "centro_salud", latOff: 0.006,  lngOff: 0.003  },
+    { nombre: "Subcentro de Salud El Inca (Simulado)",     direccion: "Av. El Inca y Rodrigo de Chávez, Quito", categoria: "centro_salud", latOff: -0.003, lngOff: -0.005 },
+    { nombre: "UPC La Carolina (Policía) (Simulado)",      direccion: "Av. Amazonas y Naciones Unidas, Quito", categoria: "policia",      latOff: 0.003,  lngOff: -0.002 },
+    { nombre: "UPC Iñaquito (Policía) (Simulado)",         direccion: "Av. Iñaquito y Mariana de Jesús, Quito", categoria: "policia",     latOff: -0.005, lngOff: 0.004  },
+    { nombre: "Punto de Apoyo Cruz Roja Norte (Simulado)", direccion: "Av. Gran Colombia y Tarqui, Quito",     categoria: "punto_ayuda",  latOff: 0.007,  lngOff: 0.001  },
+    { nombre: "Bomberos Quito Norte (Simulado)",           direccion: "Av. de la Prensa N52-120, Quito",       categoria: "punto_ayuda",  latOff: -0.006, lngOff: -0.003 }
   ];
 
-  return mockTemplates.map((item, index) => {
-    const itemLat = lat + item.latOffset;
-    const itemLng = lng + item.lngOffset;
-    const distance = getHaversineDistance(lat, lng, itemLat, itemLng);
-
-    return {
-      id: `mock-place-${index + 1}`,
-      name: item.name,
-      address: item.address,
-      latitude: itemLat,
-      longitude: itemLng,
-      category: item.category,
-      distance
-    };
-  }).filter(item => item.distance <= 2000) // Ensure strict 2000m radius filter
-    .sort((a, b) => a.distance - b.distance);
+  return templates
+    .map((t, i) => {
+      const pLat = lat + t.latOff;
+      const pLng = lng + t.lngOff;
+      return {
+        id:        `mock-${i + 1}`,
+        nombre:    t.nombre,
+        direccion: t.direccion,
+        latitude:  pLat,
+        longitude: pLng,
+        categoria: t.categoria,
+        distancia: Math.round(haversine(lat, lng, pLat, pLng))
+      };
+    })
+    .filter(l => {
+      if (l.distancia > 2000) return false;
+      if (categoriaFiltro && categoriaFiltro !== 'todos') return l.categoria === categoriaFiltro;
+      return true;
+    })
+    .sort((a, b) => a.distancia - b.distancia);
 }
 
-// Start Server and Init Database
+// Iniciar servidor
 db.init().then(() => {
   app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`   Rama: feature/sos-routes-juan`);
   });
 }).catch(err => {
-  console.error("Critical error starting database/server:", err);
+  console.error("Error crítico al iniciar:", err);
 });
