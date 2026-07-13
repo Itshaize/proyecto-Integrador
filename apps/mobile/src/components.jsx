@@ -32,7 +32,7 @@ function useConfirm() {
     setState({ visible: true, title, message: message || "", confirmLabel: confirmLabel || "Confirmar", confirmVariant: confirmVariant || "danger", onConfirm });
   }, []);
   const hide = useCallback(() => setState((s) => ({ ...s, visible: false })), []);
-  const dialog = /* @__PURE__ */ React.createElement(ConfirmDialog, { visible: state.visible, title: state.title, message: state.message, confirmLabel: state.confirmLabel, confirmVariant: state.confirmVariant, onCancel: hide, onConfirm: () => { hide(); state.onConfirm && state.onConfirm(); } });
+  const dialog = /* @__PURE__ */ React.createElement(ConfirmDialog, { visible: state.visible, title: state.title, message: state.message, confirmLabel: state.confirmLabel, confirmVariant: state.confirmVariant, onCancel: hide, onConfirm: () => { hide(); setTimeout(() => { state.onConfirm && state.onConfirm(); }, 50); } });
   return { show, dialog };
 }
 const styles = StyleSheet.create({
