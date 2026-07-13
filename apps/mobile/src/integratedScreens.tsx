@@ -955,13 +955,19 @@ export function IntegratedElderHome({
           <Text style={x.gpsText}>{status}</Text>
         </View>
         <Text style={x.elderTitle}>Mi ubicación</Text>
-        <Pressable accessibilityLabel="Cerrar sesión" onPress={logout}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar sesión"
+          onPress={logout}
+          style={({ pressed }) => [x.clockAction, pressed && x.pressed]}
+        >
           <Text style={x.clock}>
             {time.toLocaleTimeString("es-EC", {
               hour: "2-digit",
               minute: "2-digit",
             })}
           </Text>
+          <Ionicons name="log-out-outline" size={16} color={colors.muted} />
         </Pressable>
       </View>
       {error && <Notice type="error" message={error} />}
@@ -1628,6 +1634,13 @@ const x = StyleSheet.create({
     color: colors.muted,
     fontSize: 14,
     fontVariant: ["tabular-nums"],
+  },
+  clockAction: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 5,
   },
   locationRecovery: {
     borderRadius: 18,
