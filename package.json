@@ -2,13 +2,17 @@
   "name": "cuido-mas",
   "private": true,
   "version": "1.0.0",
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev:api": "npm run dev -w @cuido/api",
     "dev:mobile": "npm run start -w @cuido/mobile",
+    "seed:demo": "npm run seed -w @cuido/api",
     "test": "npm run test -w @cuido/api",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
-  "engines": { "node": ">=22.5.0" }
+  "engines": {
+    "node": ">=22.5.0"
+  }
 }
-

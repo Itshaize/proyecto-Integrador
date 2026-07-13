@@ -16,7 +16,7 @@ Requiere Node.js 22.5 o posterior.
 1. Copia `.env.example` como `.env` y cambia `JWT_SECRET`.
 2. Agrega una clave de Google Maps con Geocoding habilitado en `GOOGLE_MAPS_API_KEY`.
 3. Instala dependencias con `npm install`.
-4. Crea la cuenta demo con `npm run seed -w @cuido/api` (opcional).
+4. Crea las dos cuentas y datos de exposición con `npm run seed:demo`.
 5. Inicia la API con `npm run dev:api`.
 6. En otra terminal inicia la app con `npm run dev:mobile`.
 
@@ -24,8 +24,10 @@ Para probar en un teléfono real, reemplaza `localhost` en `EXPO_PUBLIC_API_URL`
 
 ## Cuenta demo
 
-- Administrador: `ana@cuido.ec`
-- Contraseña: `CuidoDemo123`
+- Administradora: `ana@cuido.ec` / `CuidoDemo123`
+- Adulta mayor: `maria@cuido.ec` / `Temporal123`
+
+El recorrido completo para la presentación está en [GUIA_DEMO_UNIVERSIDAD.md](GUIA_DEMO_UNIVERSIDAD.md).
 
 ## Comandos de verificación
 
