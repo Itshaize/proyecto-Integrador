@@ -254,9 +254,8 @@ async function _fetchLatestLocation(adultId) {
     _processLocationData(data);
 
   } catch (err) {
-    _adminLog(`Backend no disponible. Usando datos mock. (${err.message})`);
-    // Datos simulados para desarrollo sin backend
-    _processLocationData(_getMockLocationData(adultId));
+    _adminLog(`Backend no disponible. Verifica que el servidor esté encendido. (${err.message})`);
+    _adminUI.updateStatusBadge('SIN_ACTUALIZACION');
   }
 }
 
@@ -362,10 +361,8 @@ async function _fetchSafeZone(adultId) {
     _adminLog(`Zona cargada: "${data.nombre}" (radio ${data.radio}m)`);
 
   } catch (err) {
-    _adminLog(`Error cargando zona: ${err.message}. Usando mock.`);
-    // Mock para desarrollo
-    _admin.safeZone = _getMockSafeZone(adultId);
-    _adminUI.updateZoneInfo(_admin.safeZone);
+    _adminLog(`Error cargando zona: ${err.message}. Verifica que el backend esté encendido.`);
+    _adminUI.showToast(`Error al cargar la zona segura`, 'error');
   }
 }
 
@@ -415,18 +412,8 @@ async function _createSafeZone(formData) {
     _adminLog(`Zona creada: id=${created.id_zona}, radio=${created.radio}m`);
 
   } catch (err) {
-    _adminLog(`Backend no disponible para POST /safe-zones. Usando fallback mock. (${err.message})`);
-    
-    // Mock de creación exitosa para desarrollo sin backend
-    const created = {
-      id_zona: Math.floor(Math.random() * 1000) + 1,
-      ...payload,
-      estado: true
-    };
-    
-    _admin.safeZone = created;
-    _adminUI.updateZoneInfo(created);
-    _adminUI.showToast(`✓ Zona "${created.nombre}" creada (Modo Prueba)`, 'success');
+    _adminLog(`Backend no disponible para POST /safe-zones. (${err.message})`);
+    _adminUI.showToast(`Error de conexión: No se pudo crear la zona`, 'error');
   }
 }
 
@@ -470,18 +457,8 @@ async function _updateSafeZone(zoneId, formData) {
     _adminLog(`Zona actualizada: id=${zoneId}`);
 
   } catch (err) {
-    _adminLog(`Backend no disponible para PUT /safe-zones. Usando fallback mock. (${err.message})`);
-    
-    // Mock de actualización exitosa
-    const updated = {
-      id_zona: zoneId,
-      ...payload,
-      estado: true
-    };
-    
-    _admin.safeZone = updated;
-    _adminUI.updateZoneInfo(updated);
-    _adminUI.showToast(`✓ Zona "${updated.nombre}" actualizada (Modo Prueba)`, 'success');
+    _adminLog(`Backend no disponible para PUT /safe-zones. (${err.message})`);
+    _adminUI.showToast(`Error de conexión: No se pudo actualizar la zona`, 'error');
   }
 }
 

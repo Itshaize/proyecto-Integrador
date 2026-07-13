@@ -285,15 +285,9 @@ async function _fetchSafeZone(adultId) {
 
     _log(`Zona segura cargada: "${_state.safeZone.nombre}" (radio ${_state.safeZone.radio}m)`);
   } catch (err) {
-    // El backend no está disponible — usar datos simulados
-    _log('Backend no disponible. Usando zona simulada (mock).');
-    _state.safeZone = {
-      latitude:  -0.1807,
-      longitude: -78.4678,
-      radio:     300,
-      nombre:    'Casa',
-      estado:    true
-    };
+    // El backend no está disponible
+    _log('Backend no disponible para _fetchSafeZone. Verifica que el servidor esté encendido.');
+    _state.safeZone = null;
   }
 }
 
