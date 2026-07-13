@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Cuido+",
+    "slug": "cuido-mas",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "cuidomas",
+    "icon": "./assets/icon.png",
+    "splash": { "backgroundColor": "#071018", "resizeMode": "contain" },
+    "android": {
+      "adaptiveIcon": { "backgroundColor": "#071018", "foregroundImage": "./assets/adaptive-icon.png" },
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
+      "package": "com.cuidomas.app"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cuidomas.app",
+      "infoPlist": { "NSLocationWhenInUseUsageDescription": "Cuido+ usa tu ubicación para compartirla con tu familiar responsable." }
+    },
+    "plugins": [
+      ["expo-location", { "locationWhenInUsePermission": "Permite que Cuido+ acceda a tu ubicación para mantener informado a tu familiar." }],
+      ["expo-image-picker", { "photosPermission": "Permite elegir una foto para identificar al adulto mayor." }],
+      "expo-secure-store"
+    ]
+  }
+}
+
