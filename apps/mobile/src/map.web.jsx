@@ -3,106 +3,57 @@ import React, {
   useEffect,
   useImperativeHandle,
   useMemo,
-  useRef,
+  useRef
 } from "react";
-import { StyleSheet, View, type ViewProps } from "react-native";
-import L, { type Layer, type Map as LeafletMap } from "leaflet";
+import { StyleSheet, View } from "react-native";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-
-type Coordinate = { latitude: number; longitude: number };
-type Region = Coordinate & { latitudeDelta?: number; longitudeDelta?: number };
-type EdgePadding = {
-  top?: number;
-  right?: number;
-  bottom?: number;
-  left?: number;
-};
-
-type MapProps = ViewProps & {
-  children?: React.ReactNode;
-  region?: Region;
-  initialRegion?: Region;
-  showsUserLocation?: boolean;
-  mapPadding?: EdgePadding;
-  onPress?: (event: { nativeEvent: { coordinate: Coordinate } }) => void;
-};
-
-type MarkerProps = {
-  coordinate: Coordinate;
-  title?: string;
-  pinColor?: string;
-  draggable?: boolean;
-  onDragEnd?: (event: { nativeEvent: { coordinate: Coordinate } }) => void;
-};
-
-type CircleProps = {
-  center: Coordinate;
-  radius: number;
-  fillColor?: string;
-  strokeColor?: string;
-  strokeWidth?: number;
-};
-
-type PolylineProps = {
-  coordinates: Coordinate[];
-  strokeColor?: string;
-  strokeWidth?: number;
-};
-
-const DEFAULT_REGION: Region = {
+const DEFAULT_REGION = {
   latitude: -0.1807,
   longitude: -78.4678,
   latitudeDelta: 0.018,
-  longitudeDelta: 0.018,
+  longitudeDelta: 0.018
 };
-
-export function Marker(_props: MarkerProps) {
+function Marker(_props) {
   return null;
 }
-export function Circle(_props: CircleProps) {
+function Circle(_props) {
   return null;
 }
-export function Polyline(_props: PolylineProps) {
+function Polyline(_props) {
   return null;
 }
-
-function flattenChildren(children: React.ReactNode): React.ReactElement[] {
+function flattenChildren(children) {
   return React.Children.toArray(children).flatMap((child) => {
     if (!React.isValidElement(child)) return [];
     if (child.type === React.Fragment)
       return flattenChildren(
-        (child.props as { children?: React.ReactNode }).children,
+        child.props.children
       );
     return [child];
   });
 }
-
-function markerIcon(color: string) {
+function markerIcon(color) {
   return L.divIcon({
     className: "cuido-leaflet-marker",
     html: `<span style="display:block;width:30px;height:30px;border-radius:50% 50% 50% 8px;transform:rotate(-45deg);background:${color};border:5px solid rgba(7,16,24,.82);box-shadow:0 8px 18px rgba(2,8,15,.35)"><span style="display:block;width:7px;height:7px;border-radius:50%;background:#071018;position:absolute;left:7px;top:7px"></span></span>`,
     iconSize: [30, 30],
     iconAnchor: [15, 28],
-    tooltipAnchor: [0, -24],
+    tooltipAnchor: [0, -24]
   });
 }
-
-const MapView = forwardRef<any, MapProps>(
+const MapView = forwardRef(
   ({ children, style, region, initialRegion, mapPadding, onPress }, ref) => {
-    const containerRef = useRef<any>(null);
-    const mapRef = useRef<LeafletMap | undefined>(undefined);
-    const overlayGroupRef = useRef<L.LayerGroup | undefined>(undefined);
+    const containerRef = useRef(null);
+    const mapRef = useRef(void 0);
+    const overlayGroupRef = useRef(void 0);
     const mapRegion = region ?? initialRegion ?? DEFAULT_REGION;
     const descriptors = useMemo(() => flattenChildren(children), [children]);
-
     useImperativeHandle(ref, () => ({
-      fitToCoordinates: (
-        coordinates: Coordinate[],
-        options?: { edgePadding?: EdgePadding; animated?: boolean },
-      ) => {
+      fitToCoordinates: (coordinates, options) => {
         if (!mapRef.current || coordinates.length === 0) return;
         const bounds = L.latLngBounds(
-          coordinates.map((point) => [point.latitude, point.longitude]),
+          coordinates.map((point) => [point.latitude, point.longitude])
         );
         const padding = options?.edgePadding;
         mapRef.current.fitBounds(bounds, {
@@ -111,23 +62,21 @@ const MapView = forwardRef<any, MapProps>(
           paddingTopLeft: L.point(padding?.left ?? 24, padding?.top ?? 24),
           paddingBottomRight: L.point(
             padding?.right ?? 24,
-            padding?.bottom ?? 24,
-          ),
+            padding?.bottom ?? 24
+          )
         });
       },
-      animateToRegion: (next: Region) =>
-        mapRef.current?.flyTo([next.latitude, next.longitude], 16, {
-          duration: 0.25,
-        }),
+      animateToRegion: (next) => mapRef.current?.flyTo([next.latitude, next.longitude], 16, {
+        duration: 0.25
+      })
     }));
-
     useEffect(() => {
       if (!containerRef.current || mapRef.current) return;
-      const map = L.map(containerRef.current as HTMLElement, {
+      const map = L.map(containerRef.current, {
         center: [mapRegion.latitude, mapRegion.longitude],
         zoom: 16,
         zoomControl: false,
-        attributionControl: true,
+        attributionControl: true
       });
       const zoom = L.control.zoom({ position: "topright" }).addTo(map);
       const zoomContainer = zoom.getContainer();
@@ -141,8 +90,8 @@ const MapView = forwardRef<any, MapProps>(
         {
           attribution: "&copy; OpenStreetMap &copy; CARTO",
           subdomains: "abcd",
-          maxZoom: 20,
-        },
+          maxZoom: 20
+        }
       ).addTo(map);
       overlayGroupRef.current = L.layerGroup().addTo(map);
       mapRef.current = map;
@@ -164,11 +113,10 @@ const MapView = forwardRef<any, MapProps>(
       requestAnimationFrame(() => map.invalidateSize());
       return () => {
         map.remove();
-        mapRef.current = undefined;
-        overlayGroupRef.current = undefined;
+        mapRef.current = void 0;
+        overlayGroupRef.current = void 0;
       };
     }, []);
-
     useEffect(() => {
       const map = mapRef.current;
       if (!map) return;
@@ -177,108 +125,109 @@ const MapView = forwardRef<any, MapProps>(
       const bounds = L.latLngBounds(
         [
           mapRegion.latitude - latitudeDelta / 2,
-          mapRegion.longitude - longitudeDelta / 2,
+          mapRegion.longitude - longitudeDelta / 2
         ],
         [
           mapRegion.latitude + latitudeDelta / 2,
-          mapRegion.longitude + longitudeDelta / 2,
-        ],
+          mapRegion.longitude + longitudeDelta / 2
+        ]
       );
       map.fitBounds(bounds, { animate: false });
     }, [
       mapRegion.latitude,
       mapRegion.longitude,
       mapRegion.latitudeDelta,
-      mapRegion.longitudeDelta,
+      mapRegion.longitudeDelta
     ]);
-
     useEffect(() => {
       const map = mapRef.current;
       if (!map || !onPress) return;
-      const handler = (event: L.LeafletMouseEvent) =>
-        onPress({
-          nativeEvent: {
-            coordinate: {
-              latitude: event.latlng.lat,
-              longitude: event.latlng.lng,
-            },
-          },
-        });
+      const handler = (event) => onPress({
+        nativeEvent: {
+          coordinate: {
+            latitude: event.latlng.lat,
+            longitude: event.latlng.lng
+          }
+        }
+      });
       map.on("click", handler);
       return () => {
         map.off("click", handler);
       };
     }, [onPress]);
-
     useEffect(() => {
       const group = overlayGroupRef.current;
       if (!group) return;
       group.clearLayers();
       descriptors.forEach((descriptor) => {
-        let layer: Layer | undefined;
+        let layer;
         if (descriptor.type === Marker) {
-          const props = descriptor.props as MarkerProps;
+          const props = descriptor.props;
           const point = L.marker(
             [props.coordinate.latitude, props.coordinate.longitude],
             {
               icon: markerIcon(props.pinColor ?? "#27C7B8"),
               draggable: props.draggable,
               keyboard: true,
-              title: props.title,
-            },
+              title: props.title
+            }
           );
           if (props.title)
             point.bindTooltip(props.title, {
               direction: "top",
-              offset: [0, -8],
+              offset: [0, -8]
             });
           if (props.onDragEnd)
             point.on("dragend", (event) => {
               const next = event.target.getLatLng();
               props.onDragEnd?.({
                 nativeEvent: {
-                  coordinate: { latitude: next.lat, longitude: next.lng },
-                },
+                  coordinate: { latitude: next.lat, longitude: next.lng }
+                }
               });
             });
           layer = point;
         } else if (descriptor.type === Circle) {
-          const props = descriptor.props as CircleProps;
+          const props = descriptor.props;
           layer = L.circle([props.center.latitude, props.center.longitude], {
             radius: props.radius,
             color: props.strokeColor ?? "#27C7B8",
             weight: props.strokeWidth ?? 2,
             fillColor: props.fillColor ?? "rgba(39,199,184,.13)",
-            fillOpacity: 0.22,
+            fillOpacity: 0.22
           });
         } else if (descriptor.type === Polyline) {
-          const props = descriptor.props as PolylineProps;
+          const props = descriptor.props;
           layer = L.polyline(
             props.coordinates.map((point) => [point.latitude, point.longitude]),
             {
               color: props.strokeColor ?? "#27C7B8",
               weight: props.strokeWidth ?? 5,
-              opacity: 0.95,
-            },
+              opacity: 0.95
+            }
           );
         }
         if (layer) group.addLayer(layer);
       });
     }, [descriptors]);
-
-    return (
-      <View
-        ref={containerRef}
-        style={[styles.map, style]}
-        accessibilityLabel="Mapa interactivo"
-      />
+    return /* @__PURE__ */ React.createElement(
+      View,
+      {
+        ref: containerRef,
+        style: [styles.map, style],
+        accessibilityLabel: "Mapa interactivo"
+      }
     );
-  },
+  }
 );
-
 MapView.displayName = "WebMapView";
-export default MapView;
-
+var stdin_default = MapView;
 const styles = StyleSheet.create({
-  map: { overflow: "hidden", backgroundColor: "#0B1722" },
+  map: { overflow: "hidden", backgroundColor: "#0B1722" }
 });
+export {
+  Circle,
+  Marker,
+  Polyline,
+  stdin_default as default
+};

@@ -9,8 +9,7 @@
     "dev:api": "npm run dev -w @cuido/api",
     "dev:mobile": "npm run start -w @cuido/mobile",
     "seed:demo": "npm run seed -w @cuido/api",
-    "test": "npm run test -w @cuido/api",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "test": "npm run test -w @cuido/api"
   },
   "engines": {
     "node": ">=22.5.0"

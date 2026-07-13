@@ -1,14 +1,11 @@
-import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { config } from './config.js';
-
-export type Db = DatabaseSync;
-
-export function createDatabase(path = config.databasePath): Db {
-  if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
+import { DatabaseSync } from "node:sqlite";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { config } from "./config.js";
+function createDatabase(path = config.databasePath) {
+  if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
-  db.exec('PRAGMA foreign_keys = ON;');
+  db.exec("PRAGMA foreign_keys = ON;");
   db.exec(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id_usuario INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,4 +78,6 @@ export function createDatabase(path = config.databasePath): Db {
   `);
   return db;
 }
-
+export {
+  createDatabase
+};
