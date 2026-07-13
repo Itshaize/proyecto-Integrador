@@ -1,0 +1,693 @@
+/* ================================================================
+   styles.css — Sistema de diseño global
+   Módulo: Ubicación, Mapa y Zonas Seguras
+   Proyecto: Monitoreo Adulto Mayor
+   ================================================================ */
+
+/* ── 1. TOKENS DE DISEÑO ─────────────────────────────────────── */
+:root {
+  /* Colores base */
+  --bg-primary:      #0a0f16;
+  --bg-secondary:    #0f1923;
+  --bg-card:         #111b27;
+  --bg-card-hover:   #162030;
+
+  /* Neon Cyan — acento principal */
+  --cyan:            #00e5ff;
+  --cyan-dim:        rgba(0, 229, 255, 0.15);
+  --cyan-glow:       rgba(0, 229, 255, 0.35);
+  --cyan-border:     rgba(0, 229, 255, 0.30);
+
+  /* Verde — DENTRO_DE_ZONA */
+  --green:           #00ff88;
+  --green-dim:       rgba(0, 255, 136, 0.12);
+  --green-glow:      rgba(0, 255, 136, 0.40);
+
+  /* Rojo — SOS / FUERA_DE_ZONA */
+  --red:             #ff1744;
+  --red-dark:        #c62828;
+  --red-dim:         rgba(255, 23, 68, 0.15);
+  --red-glow:        rgba(255, 23, 68, 0.50);
+
+  /* Amarillo — advertencias */
+  --yellow:          #ffb300;
+  --yellow-dim:      rgba(255, 179, 0, 0.12);
+
+  /* Gris — desactivado */
+  --grey:            #546e7a;
+  --grey-dim:        rgba(84, 110, 122, 0.15);
+
+  /* Texto */
+  --text-primary:    #e8f4f8;
+  --text-secondary:  #7fa8c0;
+  --text-muted:      #4a6a7c;
+
+  /* Bordes */
+  --border-subtle:   rgba(255, 255, 255, 0.06);
+  --border-card:     rgba(0, 229, 255, 0.10);
+
+  /* Tipografía */
+  --font-family:     'Outfit', system-ui, -apple-system, sans-serif;
+
+  /* Radios */
+  --radius-sm:       8px;
+  --radius-md:       14px;
+  --radius-lg:       20px;
+  --radius-xl:       28px;
+  --radius-full:     9999px;
+
+  /* Sombras / glow */
+  --shadow-card:     0 4px 24px rgba(0, 0, 0, 0.40);
+  --shadow-cyan:     0 0 20px rgba(0, 229, 255, 0.25), 0 0 60px rgba(0, 229, 255, 0.08);
+  --shadow-red:      0 0 30px rgba(255, 23, 68, 0.50), 0 0 80px rgba(255, 23, 68, 0.20);
+
+  /* Tamaños de fuente accesibles (adulto mayor) */
+  --fs-xs:           13px;
+  --fs-sm:           15px;
+  --fs-base:         17px;
+  --fs-md:           19px;
+  --fs-lg:           22px;
+  --fs-xl:           26px;
+  --fs-2xl:          32px;
+  --fs-3xl:          44px;
+}
+
+/* ── 2. RESET Y BASE ─────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 3. APP SHELL ────────────────────────────────────────────── */
+.app-shell {
+  display: grid;
+  grid-template-rows:
+    56px          /* header */
+    1fr           /* mapa */
+    auto          /* address card */
+    1fr           /* SOS section */
+    48px;         /* footer */
+  height: 100dvh;
+  height: 100vh; /* fallback */
+  max-width: 430px;
+  margin: 0 auto;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── 4. HEADER ───────────────────────────────────────────────── */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  z-index: 10;
+}
+
+.header-title {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-gps-label {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.header-time {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--cyan);
+  font-variant-numeric: tabular-nums;
+}
+
+/* GPS Dot */
+.gps-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.gps-dot__pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  animation: gps-pulse 2s ease-out infinite;
+}
+
+.gps-dot--active    { background: var(--green); }
+.gps-dot--searching { background: var(--yellow); }
+.gps-dot--error     { background: var(--red); }
+.gps-dot--disabled  { background: var(--grey); }
+
+.gps-dot--active .gps-dot__pulse    { background: var(--green); }
+.gps-dot--searching .gps-dot__pulse { background: var(--yellow); }
+.gps-dot--error .gps-dot__pulse     { background: var(--red); }
+
+@keyframes gps-pulse {
+  0%   { opacity: 0.7; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(2.8); }
+}
+
+/* ── 5. MAPA ─────────────────────────────────────────────────── */
+.map-container {
+  position: relative;
+  overflow: hidden;
+  background: #0a1520;
+}
+
+/* Fondo de mapa tipo cuadrícula */
+.map-bg {
+  position: absolute;
+  inset: 0;
+  background-color: #0a1520;
+  background-image:
+    linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Calles simuladas */
+.road {
+  position: absolute;
+  background: rgba(0, 229, 255, 0.06);
+}
+.road--h { left: 0; right: 0; height: 6px; }
+.road--v { top: 0; bottom: 0; width: 6px; }
+.road--h1 { top: 38%; }
+.road--h2 { top: 65%; }
+.road--v1 { left: 30%; }
+.road--v2 { left: 68%; }
+
+/* Círculo de zona segura */
+.zone-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 180px;
+  height: 180px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid var(--green);
+  background: var(--green-dim);
+  box-shadow: 0 0 24px var(--green-glow), inset 0 0 24px rgba(0, 255, 136, 0.04);
+  pointer-events: none;
+  transition: all 0.5s ease;
+}
+
+/* Pin de ubicación */
+.location-pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.pin-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid var(--cyan);
+  animation: pin-expand 2.5s ease-out infinite;
+}
+.pin-ring--outer  { width: 70px; height: 70px; animation-delay: 0s; }
+.pin-ring--middle { width: 46px; height: 46px; animation-delay: 0.6s; }
+
+@keyframes pin-expand {
+  0%   { opacity: 0.8; transform: scale(0.5); }
+  100% { opacity: 0;   transform: scale(1); }
+}
+
+.pin-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-primary);
+  border: 3px solid var(--cyan);
+  box-shadow: var(--shadow-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+.pin-dot__inner {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cyan);
+}
+
+/* Chips sobre el mapa */
+.map-chip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  letter-spacing: 0.3px;
+}
+
+.map-chip--accuracy {
+  top: 12px;
+  left: 12px;
+  background: rgba(10, 15, 22, 0.75);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+}
+
+.chip-icon { font-size: 12px; }
+
+.map-chip--zone {
+  top: 12px;
+  right: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+}
+
+/* Estados del chip de zona */
+.map-chip--dentro-de-zona {
+  background: var(--green-dim);
+  border: 1px solid var(--green);
+  color: var(--green);
+}
+.map-chip--fuera-de-zona {
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+  color: var(--red);
+  animation: chip-alert 1s ease-in-out infinite alternate;
+}
+.map-chip--ubicacion-desactivada {
+  background: var(--grey-dim);
+  border: 1px solid var(--grey);
+  color: var(--grey);
+}
+.map-chip--sin-actualizacion {
+  background: var(--yellow-dim);
+  border: 1px solid var(--yellow);
+  color: var(--yellow);
+}
+
+@keyframes chip-alert {
+  from { opacity: 0.7; }
+  to   { opacity: 1; }
+}
+
+/* ── 6. TARJETA DE DIRECCIÓN ─────────────────────────────────── */
+.address-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  min-height: 68px;
+  position: relative;
+}
+
+.address-card__icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px var(--cyan-glow));
+}
+
+.address-card__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.address-card__label {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 2px;
+}
+
+.address-card__text {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+/* Spinner de carga de dirección */
+.address-spinner {
+  flex-shrink: 0;
+}
+
+.spinner-ring {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-card);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── 8. SECCIÓN SOS ──────────────────────────────────────────── */
+.sos-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-primary);
+}
+
+.sos-hint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-weight: 500;
+  text-align: center;
+}
+
+/* BOTÓN SOS */
+.sos-button {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  height: 90px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(145deg, var(--red) 0%, var(--red-dark) 100%);
+  box-shadow: var(--shadow-red);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+  transition: transform 0.08s ease, box-shadow 0.15s ease;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.sos-button:active {
+  transform: scale(0.96);
+  box-shadow: 0 0 40px rgba(255, 23, 68, 0.70), 0 0 100px rgba(255, 23, 68, 0.25);
+}
+
+.sos-button:focus-visible {
+  outline: 3px solid var(--red);
+  outline-offset: 4px;
+}
+
+/* Anillo pulsante detrás del botón */
+.sos-button__ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: calc(var(--radius-lg) + 4px);
+  border: 2px solid var(--red);
+  opacity: 0;
+  animation: sos-ring 2.5s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sos-ring {
+  0%   { opacity: 0.7; transform: scale(0.96); }
+  100% { opacity: 0;   transform: scale(1.06); }
+}
+
+.sos-button__label {
+  font-size: var(--fs-3xl);
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 4px;
+  line-height: 1;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.40);
+}
+
+.sos-button__sub {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 3px;
+}
+
+/* ── 9. FOOTER ───────────────────────────────────────────────── */
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.footer-sharing {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.footer-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  flex-shrink: 0;
+  animation: footer-blink 2s ease-in-out infinite;
+}
+
+@keyframes footer-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.footer-admin-name {
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+/* ── 10. MODAL SOS ───────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.80);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  padding: 0 0 24px;
+  animation: modal-in 0.25s ease;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 430px;
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 23, 68, 0.30);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  padding: 28px 24px 32px;
+  text-align: center;
+  box-shadow: 0 -8px 40px rgba(255, 23, 68, 0.20);
+  animation: card-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes card-up {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.modal-title {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.modal-body {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-btn {
+  width: 100%;
+  height: 58px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.15s ease;
+  letter-spacing: 0.5px;
+}
+
+.modal-btn:active { transform: scale(0.97); }
+
+.modal-btn--danger {
+  background: linear-gradient(135deg, var(--red), var(--red-dark));
+  color: #ffffff;
+  box-shadow: var(--shadow-red);
+  letter-spacing: 1.5px;
+}
+
+.modal-btn--secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-card);
+}
+
+/* ── 11. TOAST ───────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  z-index: 200;
+  white-space: nowrap;
+  animation: toast-in 0.3s ease;
+  pointer-events: none;
+}
+
+.toast[hidden] { display: none; }
+
+.toast--success {
+  background: var(--green-dim);
+  border: 1px solid var(--green);
+  color: var(--green);
+}
+
+.toast--error {
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+  color: var(--red);
+}
+
+.toast--info {
+  background: var(--cyan-dim);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── 12. ESTADOS DE LA ZONA (pin y círculo) ──────────────────── */
+/* Cuando el estado es FUERA_DE_ZONA, el pin se vuelve rojo */
+.app-shell.estado--fuera-de-zona .pin-dot {
+  border-color: var(--red);
+  box-shadow: 0 0 20px var(--red-glow);
+}
+.app-shell.estado--fuera-de-zona .pin-dot__inner {
+  background: var(--red);
+}
+.app-shell.estado--fuera-de-zona .pin-ring {
+  border-color: var(--red);
+}
+.app-shell.estado--fuera-de-zona .zone-circle {
+  border-color: var(--red);
+  background: var(--red-dim);
+  box-shadow: 0 0 24px rgba(255, 23, 68, 0.30);
+}
+
+/* ── 13. UTILIDADES ──────────────────────────────────────────── */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── 14. RESPONSIVE / SAFE AREA ──────────────────────────────── */
+@supports (padding: max(0px)) {
+  .app-header  { padding-top: max(0px, env(safe-area-inset-top)); }
+  .app-footer  { padding-bottom: max(0px, env(safe-area-inset-bottom)); }
+  .sos-section { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+}
+
+/* Pantallas muy pequeñas */
+@media (max-height: 640px) {
+  .sos-button       { height: 72px; }
+  .sos-button__label { font-size: var(--fs-2xl); }
+  .sos-hint          { display: none; }
+}

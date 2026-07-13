@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Panel de ubicación para adulto mayor — Sistema de monitoreo familiar" />
+  <title>Mi Ubicación — Adulto Mayor</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       APP SHELL — layout de pantalla completa
+  ════════════════════════════════════════════════════════════ -->
+  <div id="app" class="app-shell" role="main">
+
+    <!-- ── HEADER ────────────────────────────────────────────── -->
+    <header class="app-header" role="banner">
+      <div class="header-left">
+        <!-- Indicador de estado GPS -->
+        <div id="gps-indicator" class="gps-dot gps-dot--searching" role="status" aria-label="Estado GPS">
+          <span class="gps-dot__pulse"></span>
+        </div>
+        <span id="gps-label" class="header-gps-label">Buscando GPS…</span>
+      </div>
+
+      <h1 class="header-title">Mi Ubicación</h1>
+
+      <div class="header-right">
+        <time id="header-time" class="header-time" aria-label="Hora actual">--:--</time>
+      </div>
+    </header>
+
+    <!-- ── MAPA ──────────────────────────────────────────────── -->
+    <!--
+      NOTA PARA INTEGRACIÓN:
+      Reemplazar el contenido de #map-container con la inicialización
+      del Maps SDK (Google Maps JS API).
+      El div debe mantener su id="map-container" y sus dimensiones CSS.
+    -->
+    <section id="map-container" class="map-container" aria-label="Mapa de ubicación">
+
+      <!-- Fondo del mapa (placeholder — reemplazar con Maps SDK) -->
+      <div class="map-bg" aria-hidden="true">
+        <div class="map-grid"></div>
+        <div class="map-roads">
+          <div class="road road--h road--h1"></div>
+          <div class="road road--h road--h2"></div>
+          <div class="road road--v road--v1"></div>
+          <div class="road road--v road--v2"></div>
+        </div>
+      </div>
+
+      <!-- Círculo de zona segura -->
+      <div id="zone-circle" class="zone-circle" aria-hidden="true"></div>
+
+      <!-- Pin de ubicación con animación de pulso -->
+      <div id="location-pin" class="location-pin" aria-label="Tu ubicación actual">
+        <div class="pin-ring pin-ring--outer"></div>
+        <div class="pin-ring pin-ring--middle"></div>
+        <div class="pin-dot">
+          <div class="pin-dot__inner"></div>
+        </div>
+      </div>
+
+      <!-- Chip de precisión sobre el mapa -->
+      <div id="accuracy-chip" class="map-chip map-chip--accuracy" aria-live="polite">
+        <span class="chip-icon">◎</span>
+        <span id="accuracy-value">Precisión: --</span>
+      </div>
+
+      <!-- Chip de estado de zona sobre el mapa -->
+      <div id="zone-chip" class="map-chip map-chip--zone map-chip--sin-actualizacion" aria-live="assertive">
+        <span id="zone-label">SIN ACTUALIZACIÓN</span>
+      </div>
+
+    </section>
+
+    <!-- ── TARJETA DE DIRECCIÓN ───────────────────────────────── -->
+    <section class="address-card" aria-label="Dirección actual">
+      <div class="address-card__icon" aria-hidden="true">📍</div>
+      <div class="address-card__content">
+        <p class="address-card__label">Estás en</p>
+        <p id="address-text" class="address-card__text" aria-live="polite">
+          Obteniendo dirección…
+        </p>
+      </div>
+      <div id="address-spinner" class="address-spinner" aria-label="Cargando" role="status">
+        <div class="spinner-ring"></div>
+      </div>
+    </section>
+
+    <!-- ── SECCIÓN SOS ────────────────────────────────────────── -->
+    <section class="sos-section" aria-label="Botón de emergencia">
+
+      <!-- Texto de ayuda antes del botón -->
+      <p class="sos-hint">Presiona si necesitas ayuda urgente</p>
+
+      <!-- BOTÓN SOS PRINCIPAL -->
+      <button
+        id="sos-button"
+        class="sos-button"
+        type="button"
+        aria-label="Botón de emergencia SOS — Presiona para pedir ayuda"
+        onclick="handleSOSPress()"
+      >
+        <span class="sos-button__ring" aria-hidden="true"></span>
+        <span class="sos-button__label">SOS</span>
+        <span class="sos-button__sub">EMERGENCIA</span>
+      </button>
+
+    </section>
+
+    <!-- ── FOOTER ────────────────────────────────────────────── -->
+    <footer class="app-footer" role="contentinfo">
+      <div class="footer-sharing">
+        <span class="footer-dot" aria-hidden="true"></span>
+        <span>Ubicación compartida con </span>
+        <strong id="admin-name" class="footer-admin-name">tu familiar</strong>
+      </div>
+    </footer>
+
+  </div><!-- /#app -->
+
+  <!-- ── MODAL DE CONFIRMACIÓN SOS ─────────────────────────── -->
+  <div id="sos-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal-card">
+      <div class="modal-icon" aria-hidden="true">🆘</div>
+      <h2 id="modal-title" class="modal-title">¿Pedir ayuda?</h2>
+      <p class="modal-body">
+        Se enviará una alerta de emergencia con tu ubicación actual a tu familiar.
+      </p>
+      <div class="modal-actions">
+        <button
+          id="sos-confirm"
+          class="modal-btn modal-btn--danger"
+          type="button"
+          onclick="confirmSOS()"
+          aria-label="Confirmar alerta de emergencia"
+        >
+          SÍ, PEDIR AYUDA
+        </button>
+        <button
+          class="modal-btn modal-btn--secondary"
+          type="button"
+          onclick="cancelSOS()"
+          aria-label="Cancelar"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOAST DE NOTIFICACIONES ───────────────────────────── -->
+  <div id="toast" class="toast" role="alert" aria-live="assertive" hidden></div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SCRIPTS
+       tracker.js se carga primero. El módulo de Ismael llamará
+       a window.TrackerModule.init({ adultId, nombre }) después
+       de autenticar al usuario.
+  ════════════════════════════════════════════════════════════ -->
+  <script src="js/tracker.js"></script>
+
+  <script>
+    /**
+     * PUNTO DE INTEGRACIÓN CON ISMAEL
+     * ─────────────────────────────────
+     * Ismael llama a esta función después de su login exitoso.
+     * Él pasa exactamente: { adultId: Number, nombre: String }
+     *
+     * Ejemplo de cómo Ismael lo llamará:
+     *   window.TrackerModule.init({ adultId: 1, nombre: "María Guzmán" });
+     *
+     * Para pruebas locales sin backend:
+     */
+    document.addEventListener('DOMContentLoaded', () => {
+      // DATOS SIMULADOS — reemplazar cuando Ismael provea el objeto real
+      const userFromIsmael = {
+        adultId: 1,
+        nombre: "María Guzmán"
+      };
+      window.TrackerModule.init(userFromIsmael);
+    });
+
+    // ── Funciones del Modal SOS (llamadas desde HTML) ─────────
+    function handleSOSPress() {
+      document.getElementById('sos-modal').hidden = false;
+      document.getElementById('sos-button').setAttribute('aria-expanded', 'true');
+    }
+
+    function cancelSOS() {
+      document.getElementById('sos-modal').hidden = true;
+      document.getElementById('sos-button').setAttribute('aria-expanded', 'false');
+    }
+
+    function confirmSOS() {
+      document.getElementById('sos-modal').hidden = true;
+      // Delegar el SOS al módulo de Juan
+      window.TrackerModule.triggerSOS();
+    }
+  </script>
+
+</body>
+</html>

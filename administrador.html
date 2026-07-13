@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Panel de administrador — Monitoreo de adulto mayor" />
+  <title>Panel Administrador — Monitoreo</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Estilos base compartidos -->
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Leaflet CSS (Mapas libres sin API Key) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <style>
+    /* ══════════════════════════════════════════════════════════
+       ESTILOS ESPECÍFICOS DEL PANEL ADMINISTRADOR
+       ══════════════════════════════════════════════════════════ */
+
+    /* ── APP SHELL — pantalla completa ─────────────────────── */
+    body, html { overflow: hidden; }
+
+    .admin-shell {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      height: 100vh; /* fallback */
+      background: var(--bg-primary);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── MAPA FULL-SCREEN ───────────────────────────────────── */
+    #map-container {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      background: #08121e;
+      /*
+        INTEGRACIÓN MAPS SDK:
+        Inicializar el mapa de Google aquí.
+        El div mantiene position:absolute e inset:0.
+        Ver admin_logic.js → _initGoogleMap()
+      */
+    }
+
+    /* ── TARJETAS FLOTANTES ─────────────────────────────────── */
+    .float-card {
+      position: absolute;
+      z-index: 10;
+      backdrop-filter: blur(16px) saturate(160%);
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
+      background: rgba(10, 15, 22, 0.72);
+      border: 1px solid rgba(0, 229, 255, 0.12);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.40);
+      max-width: 200px;
+    }
+
+    /* Card superior izquierda — Paciente */
+    .float-card--patient {
+      top: 16px;
+      left: 12px;
+    }
+
+    .patient-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 3px;
+    }
+
+    .patient-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 160px;
+    }
+
+    .patient-id {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Card superior derecha — Estado del dispositivo */
+    .float-card--device {
+      top: 16px;
+      right: 12px;
+      text-align: right;
+    }
+
+    .device-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .device-row:last-child { margin-bottom: 0; }
+
+    .device-label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .device-value {
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .device-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Card de zoom/controles (botones del mapa) */
+    .float-card--controls {
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .map-ctrl-btn {
+      width: 36px;
+      height: 36px;
+      background: rgba(10,15,22,0.80);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .map-ctrl-btn:hover { background: var(--bg-card-hover); color: var(--cyan); }
+
+    /* ── BOTTOM ACTION SHEET ────────────────────────────────── */
+    .bottom-sheet {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      background: linear-gradient(
+        to top,
+        rgba(10, 15, 22, 0.97) 0%,
+        rgba(10, 15, 22, 0.92) 85%,
+        transparent 100%
+      );
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border-top: 1px solid rgba(0, 229, 255, 0.10);
+      padding: 0 16px 24px;
+      transition: transform 0.35s cubic-bezier(0.34, 1.20, 0.64, 1);
+    }
+
+    @supports (padding: max(0px)) {
+      .bottom-sheet { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+    }
+
+    /* Handle de arrastre */
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+      margin: 10px auto 14px;
+    }
+
+    /* Sección de estado */
+    .sheet-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      border: 1.5px solid;
+      transition: all 0.3s ease;
+      flex: 1;
+      max-width: 240px;
+    }
+
+    .status-badge__dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Variantes de estado */
+    .status-badge--dentro {
+      background: var(--green-dim);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .status-badge--dentro .status-badge__dot {
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    .status-badge--fuera {
+      background: var(--red-dim);
+      border-color: var(--red);
+      color: var(--red);
+      animation: badge-pulse 1.2s ease-in-out infinite alternate;
+    }
+    .status-badge--fuera .status-badge__dot {
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+    }
+
+    .status-badge--desactivada {
+      background: var(--grey-dim);
+      border-color: var(--grey);
+      color: var(--grey);
+    }
+    .status-badge--sin {
+      background: var(--yellow-dim);
+      border-color: var(--yellow);
+      color: var(--yellow);
+    }
+
+    @keyframes badge-pulse {
+      from { opacity: 0.75; }
+      to   { opacity: 1; }
+    }
+
+    /* Hora de actualización */
+    .sheet-update-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    .sheet-update-label { display: block; }
+    .sheet-update-value {
+      color: var(--cyan);
+      font-weight: 600;
+    }
+
+    /* Coordenadas compactas */
+    .sheet-coords {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .coord-pill {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .coord-pill__label {
+      font-size: 9px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .coord-pill__val {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--cyan);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Botones de acción */
+    .sheet-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .action-btn {
+      height: 54px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: var(--font-family);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      outline: none;
+      letter-spacing: 0.3px;
+    }
+
+    .action-btn:active { transform: scale(0.96); }
+
+    .action-btn:focus-visible {
+      outline: 2px solid var(--cyan);
+      outline-offset: 3px;
+    }
+
+    .action-btn--primary {
+      background: linear-gradient(135deg, var(--cyan) 0%, #00b0cc 100%);
+      color: var(--bg-primary);
+      box-shadow: 0 4px 16px rgba(0, 229, 255, 0.25);
+    }
+
+    .action-btn--secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-card);
+    }
+
+    .action-btn--secondary:hover {
+      border-color: var(--cyan-border);
+      color: var(--cyan);
+    }
+
+    .btn-icon { font-size: 18px; line-height: 1; }
+
+    /* ── MODALES ─────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      animation: fade-in 0.22s ease;
+    }
+
+    .modal-overlay[hidden] { display: none; }
+
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    /* Modal estándar (bottom sheet) */
+    .modal-sheet {
+      width: 100%;
+      max-width: 540px;
+      max-height: 92dvh;
+      max-height: 92vh;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      overflow-y: auto;
+      animation: sheet-up 0.32s cubic-bezier(0.34, 1.20, 0.64, 1);
+    }
+
+    @keyframes sheet-up {
+      from { transform: translateY(60px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    .modal-sheet::-webkit-scrollbar { width: 4px; }
+    .modal-sheet::-webkit-scrollbar-track { background: transparent; }
+    .modal-sheet::-webkit-scrollbar-thumb {
+      background: var(--border-card);
+      border-radius: 2px;
+    }
+
+    /* Modal de alerta — centrado */
+    .modal-alert-card {
+      width: calc(100% - 32px);
+      max-width: 400px;
+      background: var(--bg-card);
+      border: 2px solid var(--red);
+      border-radius: var(--radius-xl);
+      padding: 32px 24px 28px;
+      text-align: center;
+      box-shadow: var(--shadow-red);
+      animation: alert-in 0.35s cubic-bezier(0.34, 1.40, 0.64, 1);
+      margin: auto;
+    }
+
+    @keyframes alert-in {
+      from { transform: scale(0.85); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    /* Encabezado del modal */
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .modal-title-text {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .modal-close-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: rgba(255,255,255,0.07);
+      border-radius: 50%;
+      color: var(--text-secondary);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1;
+    }
+
+    .modal-close-btn:hover { background: var(--red-dim); color: var(--red); }
+
+    /* Cuerpo del modal — formulario */
+    .modal-body-form {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Campo de formulario */
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--cyan);
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    .form-input {
+      height: 48px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      font-size: 15px;
+      padding: 0 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px var(--cyan-dim);
+    }
+
+    .form-input[readonly] {
+      background: rgba(255, 255, 255, 0.01);
+      color: var(--text-muted);
+      cursor: not-allowed;
+      border-color: rgba(255, 255, 255, 0.04);
+    }
+    
+    .form-input[readonly]:focus {
+      border-color: rgba(255, 255, 255, 0.04);
+      box-shadow: none;
+    }
+
+    .form-input::placeholder { color: var(--text-muted); }
+
+    /* Lista de Autocompletado */
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-top: none;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      max-height: 180px;
+      overflow-y: auto;
+      z-index: 10;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .autocomplete-list li {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-primary);
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.2s;
+    }
+    
+    .autocomplete-list li:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-list li:hover {
+      background: rgba(0, 229, 255, 0.1);
+      color: var(--cyan);
+    }
+
+    .form-input--coord {
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+    }
+
+    /* Grid de dos columnas para lat/lng */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Slider del radio */
+    .radio-slider-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .radio-slider-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .radio-value-display {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--cyan);
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan-glow);
+      cursor: pointer;
+      transition: transform 0.12s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(1.2);
+    }
+
+    .slider-range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Errores de formulario */
+    .form-error {
+      font-size: 11px;
+      color: var(--red);
+      display: none;
+    }
+    .form-field.has-error .form-input  { border-color: var(--red); }
+    .form-field.has-error .form-error  { display: block; }
+
+    /* Pie del modal con botones */
+    .modal-footer {
+      padding: 14px 20px 20px;
+      display: flex;
+      gap: 10px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .modal-btn-cancel {
+      flex: 1;
+      height: 50px;
+      background: transparent;
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-family: var(--font-family);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .modal-btn-cancel:hover { border-color: var(--cyan-border); color: var(--cyan); }
+
+    .modal-btn-save {
+      flex: 2;
+      height: 50px;
+      background: linear-gradient(135deg, var(--cyan), #00b0cc);
+      border: none;
+      border-radius: var(--radius-md);
+      color: var(--bg-primary);
+      font-family: var(--font-family);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s, box-shadow 0.15s;
+      letter-spacing: 0.3px;
+    }
+    .modal-btn-save:hover  { box-shadow: 0 0 20px var(--cyan-glow); }
+    .modal-btn-save:active { transform: scale(0.97); }
+    .modal-btn-save:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ── MODAL ALERTA FUERA_DE_ZONA ─────────────────────────── */
+    #alert-modal .modal-overlay-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100%;
+      padding: 20px;
+    }
+
+    .alert-icon-wrap {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--red-dim);
+      border: 2px solid var(--red);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 36px;
+      animation: alert-icon-pulse 1.2s ease-in-out infinite alternate;
+      box-shadow: var(--shadow-red);
+    }
+
+    @keyframes alert-icon-pulse {
+      from { box-shadow: 0 0 20px rgba(255,23,68,0.4); }
+      to   { box-shadow: 0 0 50px rgba(255,23,68,0.80), 0 0 100px rgba(255,23,68,0.25); }
+    }
+
+    .alert-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--red);
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .alert-body-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+
+    .alert-adulto-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: block;
+      margin-bottom: 16px;
+    }
+
+    .alert-coords {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .alert-coord-item {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .alert-coord-val {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .alert-btn-dismiss {
+      width: 100%;
+      height: 54px;
+      background: linear-gradient(135deg, var(--red), var(--red-dark));
+      border: none;
+      border-radius: var(--radius-md);
+      color: #fff;
+      font-family: var(--font-family);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: transform 0.08s;
+    }
+    .alert-btn-dismiss:active { transform: scale(0.97); }
+
+    /* ── LOADING STATE ──────────────────────────────────────── */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-primary);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      transition: opacity 0.4s ease;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid var(--border-card);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    .loading-text {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* ── TOAST (reutiliza base de styles.css) ───────────────── */
+    .toast { max-width: calc(100vw - 32px); white-space: normal; text-align: center; }
+    /* ── PANEL LATERAL DE ZONAS ─────────────────────────────── */
+    .zones-side-panel {
+      position: absolute;
+      top: 80px; /* Debajo de la card del paciente */
+      left: 12px;
+      width: 260px;
+      max-height: calc(100vh - 200px);
+      z-index: 10;
+      backdrop-filter: blur(16px) saturate(160%);
+      -webkit-backdrop-filter: blur(16px) saturate(160%);
+      background: rgba(10, 15, 22, 0.72);
+      border: 1px solid rgba(0, 229, 255, 0.12);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.40);
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+
+    .zones-side-panel__header {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      background: rgba(0,0,0,0.2);
+    }
+    
+    .zones-side-panel__header h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 0;
+    }
+
+    .zones-side-panel__list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+    }
+
+    .zones-side-panel__list li {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .zones-side-panel__list li:hover {
+      background: rgba(0, 229, 255, 0.08);
+    }
+
+    .zones-side-panel__list li:last-child {
+      border-bottom: none;
+    }
+
+    .zone-item-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .zone-item-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Adaptación móvil: ocultarlo si la pantalla es muy pequeña o hacerlo colapsable */
+    @media (max-width: 600px) {
+      .zones-side-panel {
+        top: auto;
+        bottom: 80px; /* Arriba del bottom-sheet */
+        left: 12px;
+        right: 12px;
+        width: auto;
+        max-height: 150px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="admin-shell" id="admin-app" role="main">
+
+  <!-- ── LOADING SCREEN ──────────────────────────────────────── -->
+  <div class="loading-overlay" id="loading-overlay" aria-label="Cargando">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Obteniendo ubicación…</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       MAPA FULL-SCREEN
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="map-container" aria-label="Mapa de monitoreo"></div>
+
+  <!-- PANEL LATERAL: Zonas Seguras -->
+  <aside class="zones-side-panel">
+    <div class="zones-side-panel__header">
+      <h3>Zonas Seguras</h3>
+    </div>
+    <ul id="zones-list" class="zones-side-panel__list">
+      <!-- Rellenado por JS -->
+    </ul>
+  </aside>
+
+    <!-- ── CARD: Paciente (top-left) ─────────────────────────── -->
+    <div class="float-card float-card--patient" role="region" aria-label="Información del paciente">
+      <p class="patient-label">Monitoreando</p>
+      <p id="patient-name" class="patient-name">Cargando…</p>
+      <p id="patient-id-label" class="patient-id">ID: —</p>
+    </div>
+
+    <!-- ── CARD: Estado del dispositivo (top-right) ───────────── -->
+    <div class="float-card float-card--device" role="region" aria-label="Estado del dispositivo">
+      <div class="device-row">
+        <span class="device-label">GPS</span>
+        <div id="device-gps-dot" class="device-dot" style="background:var(--yellow)"></div>
+        <span id="device-gps-val" class="device-value" style="color:var(--yellow)">—</span>
+      </div>
+      <div class="device-row">
+        <span class="device-label">Precisión</span>
+        <span id="device-accuracy" class="device-value" style="color:var(--cyan)">— m</span>
+      </div>
+      <div class="device-row">
+        <span class="device-label">Zona</span>
+        <span id="device-zone-name" class="device-value" style="color:var(--text-secondary)">—</span>
+      </div>
+    </div>
+
+
+
+  </div><!-- /#map-container -->
+
+  <!-- ══════════════════════════════════════════════════════════
+       BOTTOM ACTION SHEET
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="bottom-sheet" role="region" aria-label="Panel de acciones">
+    <div class="sheet-handle" aria-hidden="true"></div>
+
+    <!-- Estado actual + hora -->
+    <div class="sheet-status">
+      <div
+        id="status-badge"
+        class="status-badge status-badge--sin"
+        role="status"
+        aria-live="assertive"
+        aria-label="Estado de zona"
+      >
+        <div class="status-badge__dot"></div>
+        <span id="status-badge-text">SIN ACTUALIZACIÓN</span>
+      </div>
+
+      <div class="sheet-update-time">
+        <span class="sheet-update-label">Actualizado</span>
+        <span id="last-update-time" class="sheet-update-value">--:--</span>
+      </div>
+    </div>
+
+    <!-- Coordenadas compactas -->
+    <div class="sheet-coords">
+      <div class="coord-pill">
+        <span class="coord-pill__label">Latitud</span>
+        <span id="coord-lat" class="coord-pill__val" aria-live="polite">—</span>
+      </div>
+      <div class="coord-pill">
+        <span class="coord-pill__label">Longitud</span>
+        <span id="coord-lng" class="coord-pill__val" aria-live="polite">—</span>
+      </div>
+      <div class="coord-pill">
+        <span class="coord-pill__label">Radio</span>
+        <span id="coord-radio" class="coord-pill__val">— m</span>
+      </div>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="sheet-actions">
+      <button
+        id="btn-create-zone"
+        class="action-btn action-btn--primary"
+        type="button"
+        onclick="AdminModule.openCreateZoneModal()"
+        aria-label="Crear zona segura"
+      >
+        <span class="btn-icon">＋</span>
+        Crear Zona
+      </button>
+      <button
+        id="btn-edit-zone"
+        class="action-btn action-btn--secondary"
+        type="button"
+        onclick="AdminModule.openEditZoneModal()"
+        aria-label="Editar zona segura"
+      >
+        <span class="btn-icon">✎</span>
+        Editar Zona
+      </button>
+    </div>
+  </div>
+
+</div><!-- /#admin-app -->
+
+<!-- ════════════════════════════════════════════════════════════
+     MODAL: CREAR / EDITAR ZONA SEGURA
+════════════════════════════════════════════════════════════ -->
+<div
+  id="zone-modal"
+  class="modal-overlay"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="zone-modal-title"
+  hidden
+>
+  <div class="modal-sheet">
+    <!-- Header -->
+    <div class="modal-header">
+      <h2 id="zone-modal-title" class="modal-title-text">Crear zona segura</h2>
+      <button
+        class="modal-close-btn"
+        type="button"
+        onclick="AdminModule.closeZoneModal()"
+        aria-label="Cerrar modal"
+      >✕</button>
+    </div>
+
+    <!-- Formulario -->
+    <form id="zone-form" class="modal-body-form" novalidate>
+      <!-- Campo oculto para el ID de zona (edición) -->
+      <input type="hidden" id="zone-id" value="" />
+
+      <!-- Nombre de la zona -->
+      <div class="form-field" id="field-nombre">
+        <label for="zone-nombre" class="form-label">Nombre de la zona *</label>
+        <input
+          type="text"
+          id="zone-nombre"
+          class="form-input"
+          placeholder="Ej: Casa de María"
+          maxlength="60"
+          autocomplete="off"
+          required
+        />
+        <span class="form-error">El nombre es obligatorio.</span>
+      </div>
+
+      <!-- Dirección (con autocompletado personalizado) -->
+      <div class="form-field" id="field-direccion" style="position: relative;">
+        <label for="zone-direccion" class="form-label">Dirección</label>
+        <input
+          type="text"
+          id="zone-direccion"
+          class="form-input"
+          placeholder="Escribe para buscar una dirección..."
+          autocomplete="off"
+        />
+        <ul id="address-suggestions" class="autocomplete-list" hidden></ul>
+      </div>
+
+      <!-- Mini mapa interactivo (Leaflet - Sin API Key) -->
+      <div class="form-field">
+        <label class="form-label">Ubicación en el mapa</label>
+        <div id="zone-modal-map" aria-label="Mapa para seleccionar la zona segura" style="height: 180px; width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border-card); overflow: hidden; background: #08121e; z-index: 1;">
+        </div>
+      </div>
+
+      <!-- Latitud y Longitud (ReadOnly) -->
+      <div class="form-row">
+        <div class="form-field" id="field-latitud">
+          <label for="zone-latitud" class="form-label">Latitud *</label>
+          <input
+            type="number"
+            id="zone-latitud"
+            class="form-input form-input--coord"
+            placeholder="-0.1807"
+            step="0.000001"
+            min="-90"
+            max="90"
+            readonly
+            required
+          />
+          <span class="form-error">Latitud inválida.</span>
+        </div>
+        <div class="form-field" id="field-longitud">
+          <label for="zone-longitud" class="form-label">Longitud *</label>
+          <input
+            type="number"
+            id="zone-longitud"
+            class="form-input form-input--coord"
+            placeholder="-78.4678"
+            step="0.000001"
+            min="-180"
+            max="180"
+            readonly
+            required
+          />
+          <span class="form-error">Longitud inválida.</span>
+        </div>
+      </div>
+
+      <!-- Radio en metros (slider) -->
+      <div class="form-field">
+        <div class="radio-slider-wrap">
+          <div class="radio-slider-header">
+            <label for="zone-radio" class="form-label">Radio de la zona</label>
+            <span id="radio-display" class="radio-value-display">300 m</span>
+          </div>
+          <input
+            type="range"
+            id="zone-radio"
+            min="50"
+            max="2000"
+            step="25"
+            value="300"
+            oninput="window.updateRadioDisplay(this.value)"
+            aria-valuemin="50"
+            aria-valuemax="2000"
+            aria-valuenow="300"
+            aria-label="Radio de la zona en metros"
+          />
+          <div class="slider-range-labels">
+            <span>50 m</span>
+            <span>500 m</span>
+            <span>1000 m</span>
+            <span>2000 m</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Adulto asignado (requerido por contrato del proyecto) -->
+      <div class="form-field" id="field-adulto">
+        <label for="zone-adulto" class="form-label">Adulto asignado *</label>
+        <select
+          id="zone-adulto"
+          class="form-input"
+          required
+          aria-label="Seleccionar adulto mayor"
+        >
+          <option value="" disabled selected>Selecciona un adulto mayor</option>
+          <!-- Opciones cargadas dinámicamente desde admin_logic.js -->
+        </select>
+        <span class="form-error">Debes seleccionar un adulto mayor.</span>
+      </div>
+
+    </form>
+
+    <!-- Footer con acciones -->
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="modal-btn-cancel"
+        onclick="AdminModule.closeZoneModal()"
+      >Cancelar</button>
+      <button
+        type="button"
+        id="zone-save-btn"
+        class="modal-btn-save"
+        onclick="AdminModule.submitZoneForm()"
+      >Guardar zona</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     MODAL: ALERTA — FUERA DE ZONA
+════════════════════════════════════════════════════════════ -->
+<div
+  id="alert-modal"
+  class="modal-overlay"
+  role="alertdialog"
+  aria-modal="true"
+  aria-labelledby="alert-title"
+  aria-describedby="alert-body"
+  hidden
+>
+  <div class="modal-overlay-inner" style="display:flex;align-items:center;justify-content:center;min-height:100%;padding:20px;">
+    <div class="modal-alert-card">
+      <div class="alert-icon-wrap" aria-hidden="true">⚠</div>
+      <h2 id="alert-title" class="alert-title">¡FUERA DE ZONA!</h2>
+      <p id="alert-body" class="alert-body-text">El adulto mayor salió de la zona segura:</p>
+      <strong id="alert-adulto-name" class="alert-adulto-name">—</strong>
+
+      <div class="alert-coords">
+        <div class="alert-coord-item">
+          Latitud
+          <span id="alert-lat" class="alert-coord-val">—</span>
+        </div>
+        <div class="alert-coord-item">
+          Longitud
+          <span id="alert-lng" class="alert-coord-val">—</span>
+        </div>
+        <div class="alert-coord-item">
+          Distancia
+          <span id="alert-dist" class="alert-coord-val">— m</span>
+        </div>
+      </div>
+
+      <button
+        class="alert-btn-dismiss"
+        type="button"
+        onclick="AdminModule.dismissAlert()"
+        aria-label="Entendido — cerrar alerta"
+      >
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ─────────────────────────────────────────────────── -->
+<div id="toast" class="toast" role="alert" aria-live="assertive" hidden></div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════════════════════ -->
+<!-- Leaflet JS (Mapas libres sin API Key) -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script src="js/admin_logic.js"></script>
+
+<script>
+  /**
+   * PUNTO DE INTEGRACIÓN CON ISMAEL
+   * Ismael llama a AdminModule.init({ adultId, nombre }) después del login.
+   *
+   * Ejemplo:
+   *   window.AdminModule.init({ adultId: 1, nombre: "María Guzmán" });
+   */
+  document.addEventListener('DOMContentLoaded', () => {
+    // DATOS SIMULADOS — reemplazar con el objeto real de Ismael
+    const userFromIsmael = {
+      adultId: 1,
+      nombre:  "María Guzmán"
+    };
+    window.AdminModule.init(userFromIsmael);
+  });
+</script>
+
+</body>
+</html>

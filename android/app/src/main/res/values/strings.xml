@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ubicación — Adulto Mayor</string>
+    <string name="dentro_de_zona">Dentro de zona</string>
+    <string name="fuera_de_zona">Fuera de zona</string>
+    <string name="gps_activo">Ubicación activa</string>
+    <string name="gps_desactivado">GPS desactivado</string>
+    <string name="permiso_denegado">Permiso de ubicación denegado</string>
+    <string name="sin_actualizacion">Sin actualización</string>
+</resources>

@@ -1,0 +1,66 @@
+{
+    "clientName": "Thunder Client",
+    "collectionName": "API - Adulto Mayor",
+    "collectionId": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+    "dateExported": "2026-07-13T05:35:00.000Z",
+    "version": "1.2",
+    "folders": [],
+    "requests": [
+        {
+            "_id": "req-1",
+            "colId": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+            "containerId": "",
+            "name": "1. Crear Zona Segura",
+            "url": "http://localhost:3000/api/safe-zones",
+            "method": "POST",
+            "sortNum": 10000,
+            "created": "2026-07-13T05:35:00.000Z",
+            "modified": "2026-07-13T05:35:00.000Z",
+            "headers": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n  \"adultId\": 1,\n  \"nombre\": \"Casa de María\",\n  \"direccion\": \"Av. Amazonas N35-17\",\n  \"latitude\": -0.1807,\n  \"longitude\": -78.4678,\n  \"radio\": 300\n}"
+            }
+        },
+        {
+            "_id": "req-2",
+            "colId": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+            "containerId": "",
+            "name": "2. Consultar Zona Segura",
+            "url": "http://localhost:3000/api/safe-zones/1",
+            "method": "GET",
+            "sortNum": 20000,
+            "created": "2026-07-13T05:35:00.000Z",
+            "modified": "2026-07-13T05:35:00.000Z",
+            "headers": []
+        },
+        {
+            "_id": "req-3",
+            "colId": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+            "containerId": "",
+            "name": "3. Enviar Ubicación (Fuera de zona)",
+            "url": "http://localhost:3000/api/locations",
+            "method": "POST",
+            "sortNum": 30000,
+            "created": "2026-07-13T05:35:00.000Z",
+            "modified": "2026-07-13T05:35:00.000Z",
+            "headers": [],
+            "body": {
+                "type": "json",
+                "raw": "{\n  \"adultId\": 1,\n  \"latitude\": -0.17670,\n  \"longitude\": -78.46620,\n  \"accuracy\": 15,\n  \"fecha\": \"2026-07-13\",\n  \"hora\": \"15:30:00\"\n}"
+            }
+        },
+        {
+            "_id": "req-4",
+            "colId": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+            "containerId": "",
+            "name": "4. Consultar Estado Actual",
+            "url": "http://localhost:3000/api/locations/1/latest",
+            "method": "GET",
+            "sortNum": 40000,
+            "created": "2026-07-13T05:35:00.000Z",
+            "modified": "2026-07-13T05:35:00.000Z",
+            "headers": []
+        }
+    ]
+}
