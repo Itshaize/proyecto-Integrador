@@ -1,83 +1,111 @@
-import { DatabaseSync } from "node:sqlite";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import mongoose from "mongoose";
 import { config } from "./config.js";
-function createDatabase(path = config.databasePath) {
-  if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
-  const db = new DatabaseSync(path);
-  db.exec("PRAGMA foreign_keys = ON;");
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS usuarios (
-      id_usuario INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre TEXT NOT NULL,
-      cedula TEXT NOT NULL UNIQUE,
-      correo TEXT NOT NULL UNIQUE COLLATE NOCASE,
-      telefono TEXT NOT NULL,
-      password_hash TEXT NOT NULL,
-      rol TEXT NOT NULL CHECK (rol IN ('ADMINISTRADOR','ADULTO_MAYOR')),
-      estado TEXT NOT NULL DEFAULT 'ACTIVO' CHECK (estado IN ('ACTIVO','INACTIVO')),
-      fecha_registro TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS adultos_mayores (
-      id_adulto INTEGER PRIMARY KEY AUTOINCREMENT,
-      id_usuario INTEGER NOT NULL UNIQUE,
-      fecha_nacimiento TEXT NOT NULL,
-      direccion TEXT NOT NULL,
-      latitude REAL,
-      longitude REAL,
-      contacto_emergencia TEXT NOT NULL,
-      foto TEXT,
-      FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
-    );
-    CREATE TABLE IF NOT EXISTS relaciones (
-      id_relacion INTEGER PRIMARY KEY AUTOINCREMENT,
-      id_administrador INTEGER NOT NULL,
-      id_adulto INTEGER NOT NULL UNIQUE,
-      fecha_asignacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      estado TEXT NOT NULL DEFAULT 'ACTIVO',
-      FOREIGN KEY (id_administrador) REFERENCES usuarios(id_usuario),
-      FOREIGN KEY (id_adulto) REFERENCES adultos_mayores(id_adulto) ON DELETE CASCADE
-    );
-    CREATE TABLE IF NOT EXISTS ubicaciones (
-      id_ubicacion INTEGER PRIMARY KEY AUTOINCREMENT,
-      id_adulto INTEGER NOT NULL,
-      latitude REAL NOT NULL,
-      longitude REAL NOT NULL,
-      accuracy REAL NOT NULL,
-      fecha TEXT NOT NULL,
-      hora TEXT NOT NULL,
-      direccion TEXT,
-      FOREIGN KEY (id_adulto) REFERENCES adultos_mayores(id_adulto) ON DELETE CASCADE
-    );
-    CREATE INDEX IF NOT EXISTS idx_ubicaciones_adulto_fecha
-      ON ubicaciones(id_adulto, id_ubicacion DESC);
-    CREATE TABLE IF NOT EXISTS zonas_seguras (
-      id_zona INTEGER PRIMARY KEY AUTOINCREMENT,
-      id_adulto INTEGER NOT NULL UNIQUE,
-      nombre TEXT NOT NULL,
-      direccion TEXT NOT NULL,
-      latitude REAL NOT NULL,
-      longitude REAL NOT NULL,
-      radio INTEGER NOT NULL CHECK (radio BETWEEN 50 AND 2000),
-      estado TEXT NOT NULL DEFAULT 'ACTIVO' CHECK (estado IN ('ACTIVO','INACTIVO')),
-      FOREIGN KEY (id_adulto) REFERENCES adultos_mayores(id_adulto) ON DELETE CASCADE
-    );
-    CREATE TABLE IF NOT EXISTS alertas (
-      id_alerta INTEGER PRIMARY KEY AUTOINCREMENT,
-      id_adulto INTEGER NOT NULL,
-      tipo TEXT NOT NULL CHECK (tipo IN ('SOS','FUERA_DE_ZONA')),
-      fecha TEXT NOT NULL,
-      hora TEXT NOT NULL,
-      latitude REAL NOT NULL,
-      longitude REAL NOT NULL,
-      estado TEXT NOT NULL DEFAULT 'NUEVA' CHECK (estado IN ('NUEVA','VISTA','ATENDIDA','CERRADA')),
-      FOREIGN KEY (id_adulto) REFERENCES adultos_mayores(id_adulto) ON DELETE CASCADE
-    );
-    CREATE INDEX IF NOT EXISTS idx_alertas_adulto_fecha
-      ON alertas(id_adulto, id_alerta DESC);
-  `);
-  return db;
+
+const commonOptions = { versionKey: false };
+
+const counterSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  seq: { type: Number, required: true, default: 0 }
+}, commonOptions);
+
+const userSchema = new mongoose.Schema({
+  id_usuario: { type: Number, required: true, unique: true, index: true },
+  nombre: { type: String, required: true },
+  cedula: { type: String, required: true, unique: true },
+  correo: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  telefono: { type: String, required: true },
+  password_hash: { type: String, required: true },
+  rol: { type: String, required: true, enum: ["ADMINISTRADOR", "ADULTO_MAYOR"] },
+  estado: { type: String, required: true, enum: ["ACTIVO", "INACTIVO"], default: "ACTIVO" },
+  fecha_registro: { type: Date, default: Date.now }
+}, commonOptions);
+
+const adultSchema = new mongoose.Schema({
+  id_adulto: { type: Number, required: true, unique: true, index: true },
+  id_usuario: { type: Number, required: true, unique: true, index: true },
+  fecha_nacimiento: { type: String, required: true },
+  direccion: { type: String, required: true },
+  latitude: Number,
+  longitude: Number,
+  contacto_emergencia: { type: String, required: true },
+  foto: { type: String, default: null }
+}, commonOptions);
+
+const relationSchema = new mongoose.Schema({
+  id_relacion: { type: Number, required: true, unique: true },
+  id_administrador: { type: Number, required: true, index: true },
+  id_adulto: { type: Number, required: true, unique: true, index: true },
+  fecha_asignacion: { type: Date, default: Date.now },
+  estado: { type: String, enum: ["ACTIVO", "INACTIVO"], default: "ACTIVO" }
+}, commonOptions);
+
+const locationSchema = new mongoose.Schema({
+  id_ubicacion: { type: Number, required: true, unique: true },
+  id_adulto: { type: Number, required: true, index: true },
+  latitude: { type: Number, required: true },
+  longitude: { type: Number, required: true },
+  accuracy: { type: Number, required: true },
+  fecha: { type: String, required: true },
+  hora: { type: String, required: true },
+  direccion: { type: String, default: null }
+}, commonOptions);
+locationSchema.index({ id_adulto: 1, id_ubicacion: -1 });
+
+const safeZoneSchema = new mongoose.Schema({
+  id_zona: { type: Number, required: true, unique: true },
+  id_adulto: { type: Number, required: true, unique: true, index: true },
+  nombre: { type: String, required: true },
+  direccion: { type: String, required: true },
+  latitude: { type: Number, required: true },
+  longitude: { type: Number, required: true },
+  radio: { type: Number, required: true, min: 50, max: 2000 },
+  estado: { type: String, enum: ["ACTIVO", "INACTIVO"], default: "ACTIVO" }
+}, commonOptions);
+
+const alertSchema = new mongoose.Schema({
+  id_alerta: { type: Number, required: true, unique: true },
+  id_adulto: { type: Number, required: true, index: true },
+  tipo: { type: String, required: true, enum: ["SOS", "FUERA_DE_ZONA"] },
+  fecha: { type: String, required: true },
+  hora: { type: String, required: true },
+  latitude: { type: Number, required: true },
+  longitude: { type: Number, required: true },
+  estado: { type: String, enum: ["NUEVA", "VISTA", "ATENDIDA", "CERRADA"], default: "NUEVA" }
+}, commonOptions);
+alertSchema.index({ id_adulto: 1, fecha: -1, hora: -1 });
+
+const Counter = mongoose.models.Counter ?? mongoose.model("Counter", counterSchema, "contadores");
+const User = mongoose.models.User ?? mongoose.model("User", userSchema, "usuarios");
+const Adult = mongoose.models.Adult ?? mongoose.model("Adult", adultSchema, "adultos_mayores");
+const Relation = mongoose.models.Relation ?? mongoose.model("Relation", relationSchema, "relaciones");
+const Location = mongoose.models.Location ?? mongoose.model("Location", locationSchema, "ubicaciones");
+const SafeZone = mongoose.models.SafeZone ?? mongoose.model("SafeZone", safeZoneSchema, "zonas_seguras");
+const Alert = mongoose.models.Alert ?? mongoose.model("Alert", alertSchema, "alertas");
+
+const models = { Counter, User, Adult, Relation, Location, SafeZone, Alert };
+
+async function connectDatabase(options = {}) {
+  if (!config.mongodbUri) throw new Error("MONGODB_URI no está configurada.");
+  if (mongoose.connection.readyState === 1) return models;
+  await mongoose.connect(config.mongodbUri, {
+    dbName: options.dbName ?? config.mongodbDatabase,
+    serverSelectionTimeoutMS: options.serverSelectionTimeoutMS ?? 12000
+  });
+  await Promise.all(Object.values(models).filter((model) => model !== Counter).map((model) => model.init()));
+  return models;
 }
-export {
-  createDatabase
-};
+
+async function disconnectDatabase() {
+  await mongoose.disconnect();
+}
+
+async function nextId(name) {
+  const counter = await Counter.findByIdAndUpdate(name, { $inc: { seq: 1 } }, { returnDocument: "after", upsert: true });
+  return counter.seq;
+}
+
+async function ensureCounter(name, value) {
+  await Counter.updateOne({ _id: name, seq: { $lt: value } }, { $set: { seq: value } }, { upsert: true });
+}
+
+export { connectDatabase, disconnectDatabase, ensureCounter, models, nextId };

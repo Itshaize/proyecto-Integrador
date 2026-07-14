@@ -2,7 +2,7 @@
 
 ## Decisión de arquitectura
 
-Las ramas originales usaban tres stacks diferentes: Expo/React Native, Android Compose y una aplicación web. Fusionarlas directamente habría creado tres servidores, dos bases y contratos sin autenticación compartida. La integración porta la lógica útil a la arquitectura de Ismael: una app Expo y una API Express con SQLite nativo.
+Las ramas originales usaban tres stacks diferentes: Expo/React Native, Android Compose y una aplicación web. Fusionarlas directamente habría creado tres servidores, dos bases y contratos sin autenticación compartida. La integración porta la lógica útil a la arquitectura de Ismael: una app Expo y una API Express con MongoDB Atlas.
 
 ## Responsabilidad conservada
 
