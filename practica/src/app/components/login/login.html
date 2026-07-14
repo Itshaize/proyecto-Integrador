@@ -4,14 +4,14 @@
   <p><strong>URL:</strong> {{ api.apiBase }}/auth/login</p>
   <p>Este componente recibe correo y password. La respuesta devuelve un token JWT.</p>
 
-  <form (ngSubmit)="iniciarSesion()">
+  <form novalidate>
     <label>Correo</label>
     <input name="loginCorreo" type="email" [(ngModel)]="login.correo" required />
 
     <label>Password</label>
     <input name="loginPassword" type="password" [(ngModel)]="login.password" required />
 
-    <button type="submit">Enviar POST</button>
+    <button type="button" (click)="iniciarSesion()">Enviar POST</button>
   </form>
 
   <p><strong>Token obtenido:</strong></p>

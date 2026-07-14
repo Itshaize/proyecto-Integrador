@@ -6,6 +6,7 @@
   <div *ngIf="api.resultado; else espera">
     <p><strong>Ultimo endpoint:</strong> {{ api.resultado.metodo }} {{ api.resultado.url }}</p>
     <p><strong>Status:</strong> {{ api.resultado.estado }}</p>
+    <p><strong>Respuesta:</strong> {{ api.resultado.respuesta | json }}</p>
     <p><a routerLink="/resultado">Ver request y response completo</a></p>
   </div>
 

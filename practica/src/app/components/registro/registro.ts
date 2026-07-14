@@ -19,7 +19,29 @@ export class RegistroComponent {
 
   constructor(public api: PracticaApiService) {}
 
+  get formularioInvalido(): boolean {
+    return (
+      this.registro.nombre.trim().length < 3 ||
+      this.registro.cedula.trim().length !== 10 ||
+      this.registro.correo.trim().length < 5 ||
+      this.registro.telefono.trim().length < 9 ||
+      this.registro.password.length < 8
+    );
+  }
+
   registrar(): void {
+    if (this.formularioInvalido) {
+      this.api.resultado = {
+        titulo: 'Validacion registro',
+        metodo: 'POST',
+        url: `${this.api.apiBase}/auth/register`,
+        estado: 'Formulario incompleto',
+        peticion: { ...this.registro },
+        respuesta: 'Revisa los datos. La password debe tener minimo 8 caracteres, con letra y numero.',
+      };
+      return;
+    }
+
     const url = `${this.api.apiBase}/auth/register`;
     this.api.ejecutar(
       'POST registro',

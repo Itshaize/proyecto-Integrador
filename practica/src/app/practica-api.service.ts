@@ -57,6 +57,15 @@ export class PracticaApiService {
     llamada: Observable<HttpResponse<T>>,
   ): void {
     this.cargando = titulo;
+    this.resultado = {
+      titulo,
+      metodo,
+      url,
+      estado: 'Enviando',
+      peticion,
+      respuesta: 'Peticion enviada. Esperando respuesta del servidor...',
+    };
+
     llamada.subscribe({
       next: (response: HttpResponse<T>) => {
         const body = response.body;

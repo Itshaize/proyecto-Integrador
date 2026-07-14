@@ -16,7 +16,23 @@ export class LoginComponent {
 
   constructor(public api: PracticaApiService) {}
 
+  get formularioInvalido(): boolean {
+    return this.login.correo.trim().length < 5 || this.login.password.length < 1;
+  }
+
   iniciarSesion(): void {
+    if (this.formularioInvalido) {
+      this.api.resultado = {
+        titulo: 'Validacion login',
+        metodo: 'POST',
+        url: `${this.api.apiBase}/auth/login`,
+        estado: 'Formulario incompleto',
+        peticion: { ...this.login },
+        respuesta: 'Ingresa correo y password para iniciar sesion.',
+      };
+      return;
+    }
+
     const url = `${this.api.apiBase}/auth/login`;
     this.api.ejecutar(
       'POST login',
