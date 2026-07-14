@@ -24,7 +24,7 @@ export class RegistroComponent {
   get formularioInvalido(): boolean {
     return (
       this.registro.nombre.trim().length < 3 ||
-      this.registro.cedula.trim().length !== 10 ||
+      !this.cedulaValida(this.registro.cedula) ||
       this.registro.correo.trim().length < 5 ||
       this.registro.telefono.trim().length < 9 ||
       this.registro.password.length < 8
@@ -42,7 +42,7 @@ export class RegistroComponent {
         url: `${this.api.apiBase}/auth/register`,
         estado: 'Formulario incompleto',
         peticion: { ...this.registro },
-        respuesta: 'Revisa los datos. La password debe tener minimo 8 caracteres, con letra y numero.',
+        respuesta: 'Revisa los datos. La cedula debe ser ecuatoriana valida y la password minimo 8 caracteres con letra y numero.',
       };
       return;
     }
@@ -56,5 +56,24 @@ export class RegistroComponent {
       { ...this.registro },
       this.api.registrarAdministrador(this.api.apiBase, this.registro),
     );
+  }
+
+  private cedulaValida(value: string): boolean {
+    if (!/^\d{10}$/.test(value)) {
+      return false;
+    }
+
+    const province = Number(value.slice(0, 2));
+    if (province < 1 || province > 24) {
+      return false;
+    }
+
+    const digits = value.split('').map(Number);
+    const sum = digits.slice(0, 9).reduce((total, digit, index) => {
+      const result = digit * (index % 2 === 0 ? 2 : 1);
+      return total + (result > 9 ? result - 9 : result);
+    }, 0);
+
+    return (10 - (sum % 10)) % 10 === digits[9];
   }
 }

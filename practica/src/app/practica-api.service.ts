@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, TimeoutError, timeout } from 'rxjs';
 
 export interface AuthResponse {
   token: string;
@@ -66,7 +66,7 @@ export class PracticaApiService {
       respuesta: 'Peticion enviada. Esperando respuesta del servidor...',
     };
 
-    llamada.subscribe({
+    llamada.pipe(timeout({ first: 8000 })).subscribe({
       next: (response: HttpResponse<T>) => {
         const body = response.body;
         if (this.isAuthResponse(body)) {
@@ -84,13 +84,16 @@ export class PracticaApiService {
         this.cargando = '';
       },
       error: (error: HttpErrorResponse) => {
+        const isTimeout = error instanceof TimeoutError;
         this.resultado = {
           titulo,
           metodo,
           url,
-          estado: error.status || 'Error',
+          estado: isTimeout ? 'Timeout' : error.status || 'Error',
           peticion,
-          respuesta: error.error || error.message,
+          respuesta: isTimeout
+            ? 'La API no respondio en 8 segundos. Revisa que npm run dev:api este activo.'
+            : error.error || error.message,
         };
         this.cargando = '';
       },
