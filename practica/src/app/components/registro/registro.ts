@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PracticaApiService } from '../../practica-api.service';
+import { RespuestaMiniComponent } from '../respuesta-mini/respuesta-mini';
 
 @Component({
   selector: 'app-registro',
-  imports: [FormsModule],
+  imports: [FormsModule, RespuestaMiniComponent],
   templateUrl: './registro.html'
 })
 export class RegistroComponent {

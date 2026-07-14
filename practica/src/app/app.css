@@ -66,6 +66,11 @@ header {
   background: #cccccc;
 }
 
+:host ::ng-deep button:disabled {
+  color: #777;
+  cursor: not-allowed;
+}
+
 :host ::ng-deep textarea {
   width: 100%;
   height: 70px;
@@ -88,6 +93,13 @@ header {
 :host ::ng-deep pre {
   max-height: 260px;
   overflow: auto;
+}
+
+:host ::ng-deep .verificacion {
+  margin-top: 15px;
+  padding: 10px;
+  border: 1px dashed #777;
+  background: #f7f7f7;
 }
 
 @media (max-width: 950px) {

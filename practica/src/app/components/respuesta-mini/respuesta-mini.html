@@ -1,0 +1,15 @@
+<div class="verificacion">
+  <p><strong>Verificacion:</strong></p>
+
+  <p *ngIf="api.cargando">Ejecutando {{ api.cargando }}...</p>
+
+  <div *ngIf="api.resultado; else espera">
+    <p><strong>Ultimo endpoint:</strong> {{ api.resultado.metodo }} {{ api.resultado.url }}</p>
+    <p><strong>Status:</strong> {{ api.resultado.estado }}</p>
+    <p><a routerLink="/resultado">Ver request y response completo</a></p>
+  </div>
+
+  <ng-template #espera>
+    <p>Todavia no se ha enviado ninguna peticion.</p>
+  </ng-template>
+</div>

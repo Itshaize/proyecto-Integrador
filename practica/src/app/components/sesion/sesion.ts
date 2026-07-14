@@ -1,8 +1,11 @@
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { PracticaApiService } from '../../practica-api.service';
+import { RespuestaMiniComponent } from '../respuesta-mini/respuesta-mini';
 
 @Component({
   selector: 'app-sesion',
+  imports: [CommonModule, RespuestaMiniComponent],
   templateUrl: './sesion.html'
 })
 export class SesionComponent {

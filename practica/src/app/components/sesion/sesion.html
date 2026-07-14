@@ -7,5 +7,9 @@
   <p><strong>Header enviado:</strong></p>
   <div class="codigo">Authorization: {{ api.authorizationPreview }}</div>
 
-  <button type="button" (click)="revisarSesion()">Enviar GET</button>
+  <p *ngIf="!api.token"><strong>Nota:</strong> primero usa el login para obtener un token.</p>
+
+  <button type="button" (click)="revisarSesion()" [disabled]="!api.token">Enviar GET</button>
+
+  <app-respuesta-mini></app-respuesta-mini>
 </section>
