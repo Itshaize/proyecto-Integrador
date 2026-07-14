@@ -1,0 +1,19 @@
+<section>
+  <h2>Endpoint 2: Inicio de sesion</h2>
+  <p><strong>Metodo:</strong> POST</p>
+  <p><strong>URL:</strong> {{ api.apiBase }}/auth/login</p>
+  <p>Este componente recibe correo y password. La respuesta devuelve un token JWT.</p>
+
+  <form (ngSubmit)="iniciarSesion()">
+    <label>Correo</label>
+    <input name="loginCorreo" type="email" [(ngModel)]="login.correo" required />
+
+    <label>Password</label>
+    <input name="loginPassword" type="password" [(ngModel)]="login.password" required />
+
+    <button type="submit">Enviar POST</button>
+  </form>
+
+  <p><strong>Token obtenido:</strong></p>
+  <textarea readonly [value]="api.token || 'Todavia no se ha obtenido token'"></textarea>
+</section>

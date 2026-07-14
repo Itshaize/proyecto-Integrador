@@ -1,0 +1,30 @@
+<section>
+  <h2>Endpoint 1: Registro</h2>
+  <p><strong>Metodo:</strong> POST</p>
+  <p><strong>URL:</strong> {{ api.apiBase }}/auth/register</p>
+  <p>Este componente representa un formulario que envia datos al backend.</p>
+
+  <label>
+    URL base de la API:
+    <input [(ngModel)]="api.apiBase" />
+  </label>
+
+  <form (ngSubmit)="registrar()">
+    <label>Nombre</label>
+    <input name="nombre" [(ngModel)]="registro.nombre" required />
+
+    <label>Cedula</label>
+    <input name="cedula" [(ngModel)]="registro.cedula" required />
+
+    <label>Correo</label>
+    <input name="correo" type="email" [(ngModel)]="registro.correo" required />
+
+    <label>Telefono</label>
+    <input name="telefono" [(ngModel)]="registro.telefono" required />
+
+    <label>Password</label>
+    <input name="password" type="password" [(ngModel)]="registro.password" required />
+
+    <button type="submit">Enviar POST</button>
+  </form>
+</section>

@@ -1,0 +1,24 @@
+<section>
+  <h2>Resultado de la peticion</h2>
+  <p>Este componente muestra el request y response generados por los otros componentes.</p>
+
+  <p *ngIf="api.cargando">Ejecutando {{ api.cargando }}...</p>
+
+  <div *ngIf="api.resultado; else sinResultado">
+    <p><strong>Metodo:</strong> {{ api.resultado.metodo }}</p>
+    <p><strong>URL:</strong> {{ api.resultado.url }}</p>
+    <p><strong>Status:</strong> {{ api.resultado.estado }}</p>
+
+    <div *ngIf="api.resultado.peticion">
+      <h3>Request</h3>
+      <pre>{{ api.resultado.peticion | json }}</pre>
+    </div>
+
+    <h3>Response</h3>
+    <pre>{{ api.resultado.respuesta | json }}</pre>
+  </div>
+
+  <ng-template #sinResultado>
+    <p>No se ha ejecutado ningun endpoint.</p>
+  </ng-template>
+</section>

@@ -4,6 +4,7 @@ dist/
 dist-web/
 .logs/
 coverage/
+*.log
 *.db
 *.db-shm
 *.db-wal

@@ -1,0 +1,17 @@
+nav {
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid #999;
+  background: #eeeeee;
+}
+
+a {
+  margin-right: 18px;
+  color: #003366;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+a.activo {
+  text-decoration: underline;
+}

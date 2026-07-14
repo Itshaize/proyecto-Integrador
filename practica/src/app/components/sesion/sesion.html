@@ -1,0 +1,11 @@
+<section>
+  <h2>Endpoint 3: Sesion activa</h2>
+  <p><strong>Metodo:</strong> GET</p>
+  <p><strong>URL:</strong> {{ api.apiBase }}/auth/me</p>
+  <p>Este componente consulta informacion protegida enviando el token en el header.</p>
+
+  <p><strong>Header enviado:</strong></p>
+  <div class="codigo">Authorization: {{ api.authorizationPreview }}</div>
+
+  <button type="button" (click)="revisarSesion()">Enviar GET</button>
+</section>
