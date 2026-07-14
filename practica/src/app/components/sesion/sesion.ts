@@ -9,9 +9,13 @@ import { RespuestaMiniComponent } from '../respuesta-mini/respuesta-mini';
   templateUrl: './sesion.html'
 })
 export class SesionComponent {
+  mensaje = '';
+
   constructor(public api: PracticaApiService) {}
 
   revisarSesion(): void {
+    this.mensaje = 'Enviando GET /auth/me con el token guardado...';
+
     const url = `${this.api.apiBase}/auth/me`;
     this.api.ejecutar(
       'GET sesion activa',

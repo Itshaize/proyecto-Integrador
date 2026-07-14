@@ -26,8 +26,12 @@
     <input name="password" type="password" [(ngModel)]="registro.password" required />
     <small>Minimo 8 caracteres. Ejemplo: Clave1234</small>
 
-    <button type="button" (click)="registrar()">Enviar POST</button>
+    <button type="button" (click)="registrar()" [disabled]="api.cargando !== ''">
+      {{ api.cargando ? 'Enviando...' : 'Enviar POST' }}
+    </button>
   </form>
+
+  <p class="mensaje" *ngIf="mensaje">{{ mensaje }}</p>
 
   <app-respuesta-mini></app-respuesta-mini>
 </section>

@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PracticaApiService } from '../../practica-api.service';
@@ -5,7 +6,7 @@ import { RespuestaMiniComponent } from '../respuesta-mini/respuesta-mini';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, RespuestaMiniComponent],
+  imports: [CommonModule, FormsModule, RespuestaMiniComponent],
   templateUrl: './login.html'
 })
 export class LoginComponent {
@@ -13,6 +14,7 @@ export class LoginComponent {
     correo: 'ana@cuido.ec',
     password: 'CuidoDemo123',
   };
+  mensaje = '';
 
   constructor(public api: PracticaApiService) {}
 
@@ -21,7 +23,10 @@ export class LoginComponent {
   }
 
   iniciarSesion(): void {
+    this.mensaje = 'Click recibido. Validando credenciales...';
+
     if (this.formularioInvalido) {
+      this.mensaje = 'No se envio: ingresa correo y password.';
       this.api.resultado = {
         titulo: 'Validacion login',
         metodo: 'POST',
@@ -33,6 +38,7 @@ export class LoginComponent {
       return;
     }
 
+    this.mensaje = 'Enviando POST /auth/login al backend...';
     const url = `${this.api.apiBase}/auth/login`;
     this.api.ejecutar(
       'POST login',

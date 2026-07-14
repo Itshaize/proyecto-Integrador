@@ -9,7 +9,11 @@
 
   <p *ngIf="!api.token"><strong>Nota:</strong> primero usa el login para obtener un token.</p>
 
-  <button type="button" (click)="revisarSesion()" [disabled]="!api.token">Enviar GET</button>
+  <button type="button" (click)="revisarSesion()" [disabled]="!api.token || api.cargando !== ''">
+    {{ api.cargando ? 'Consultando...' : 'Enviar GET' }}
+  </button>
+
+  <p class="mensaje" *ngIf="mensaje">{{ mensaje }}</p>
 
   <app-respuesta-mini></app-respuesta-mini>
 </section>

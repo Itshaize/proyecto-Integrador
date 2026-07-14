@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PracticaApiService } from '../../practica-api.service';
@@ -5,7 +6,7 @@ import { RespuestaMiniComponent } from '../respuesta-mini/respuesta-mini';
 
 @Component({
   selector: 'app-registro',
-  imports: [FormsModule, RespuestaMiniComponent],
+  imports: [CommonModule, FormsModule, RespuestaMiniComponent],
   templateUrl: './registro.html'
 })
 export class RegistroComponent {
@@ -16,6 +17,7 @@ export class RegistroComponent {
     telefono: '0987654322',
     password: 'Clave1234',
   };
+  mensaje = '';
 
   constructor(public api: PracticaApiService) {}
 
@@ -30,7 +32,10 @@ export class RegistroComponent {
   }
 
   registrar(): void {
+    this.mensaje = 'Click recibido. Validando datos del formulario...';
+
     if (this.formularioInvalido) {
+      this.mensaje = 'No se envio: faltan datos validos en el formulario.';
       this.api.resultado = {
         titulo: 'Validacion registro',
         metodo: 'POST',
@@ -42,6 +47,7 @@ export class RegistroComponent {
       return;
     }
 
+    this.mensaje = 'Enviando POST /auth/register al backend...';
     const url = `${this.api.apiBase}/auth/register`;
     this.api.ejecutar(
       'POST registro',

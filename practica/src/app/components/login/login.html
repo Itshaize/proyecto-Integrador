@@ -11,8 +11,12 @@
     <label>Password</label>
     <input name="loginPassword" type="password" [(ngModel)]="login.password" required />
 
-    <button type="button" (click)="iniciarSesion()">Enviar POST</button>
+    <button type="button" (click)="iniciarSesion()" [disabled]="api.cargando !== ''">
+      {{ api.cargando ? 'Enviando...' : 'Enviar POST' }}
+    </button>
   </form>
+
+  <p class="mensaje" *ngIf="mensaje">{{ mensaje }}</p>
 
   <p><strong>Token obtenido:</strong></p>
   <textarea readonly [value]="api.token || 'Todavia no se ha obtenido token'"></textarea>
