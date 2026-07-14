@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { afterEach, beforeEach, describe, it } from "node:test";
+import { after, afterEach, before, beforeEach, describe, it } from "node:test";
+import mongoose from "mongoose";
 import request from "supertest";
 import { createApp } from "../src/app.js";
 import { config } from "../src/config.js";
-import { createDatabase } from "../src/db.js";
+import { connectDatabase, disconnectDatabase, models } from "../src/db.js";
 const cedula = (firstNine) => {
   const d = firstNine.split("").map(Number);
   const sum = d.reduce((t, n, i) => t + (i % 2 === 0 ? n * 2 > 9 ? n * 2 - 9 : n * 2 : n), 0);
@@ -12,21 +13,27 @@ const cedula = (firstNine) => {
 const admin = { nombre: "Ana Sof\xEDa Ruiz", cedula: cedula("171234567"), correo: "ana@cuido.ec", telefono: "0987654321", password: "Clave1234" };
 const adult = (n) => ({ nombre: n === 1 ? "Mar\xEDa Elena Guzm\xE1n" : "Carlos Vicente Mora", cedula: cedula(`09266878${n}`), correo: `adulto${n}@cuido.ec`, telefono: `09945678${n}0`, password: "Temporal123", fecha_nacimiento: "1952-04-18", direccion: "Av. Amazonas y Naciones Unidas", contacto_emergencia: "0987654321", foto: null, latitude: -0.1769, longitude: -78.4803, estado: "ACTIVO" });
 describe("Cuido+ API integrada", () => {
-  let db;
   let app;
   let token = "";
   const originalFetch = globalThis.fetch;
   const originalKey = config.googleMapsApiKey;
+  const testDatabase = `cuido_test_${Date.now()}`;
+  before(async () => {
+    await connectDatabase({ dbName: testDatabase });
+  });
   beforeEach(async () => {
-    db = createDatabase(":memory:");
-    app = createApp(db, async (d) => ({ direccion: `${d}, Quito, Ecuador`, latitude: -0.1807, longitude: -78.4678 }));
+    await Promise.all(Object.values(models).map((model) => model.deleteMany({})));
+    app = createApp(models, async (d) => ({ direccion: `${d}, Quito, Ecuador`, latitude: -0.1807, longitude: -78.4678 }));
     const response = await request(app).post("/api/auth/register").send(admin);
     token = response.body.token;
   });
   afterEach(() => {
-    db.close();
     globalThis.fetch = originalFetch;
     config.googleMapsApiKey = originalKey;
+  });
+  after(async () => {
+    await mongoose.connection.dropDatabase();
+    await disconnectDatabase();
   });
   it("registra administrador, impide correo repetido e inicia sesi\xF3n", async () => {
     assert.ok(token);

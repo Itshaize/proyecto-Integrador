@@ -4,8 +4,8 @@ Aplicación móvil integrada para que un familiar administre hasta dos adultos m
 
 ## Stack
 
-- App: Expo + React Native + TypeScript
-- API: Node.js + Express + SQLite nativo
+- App: Expo + React Native + JavaScript
+- API: Node.js + Express + MongoDB Atlas (Mongoose)
 - Seguridad: JWT de 8 horas y bcrypt (12 rondas)
 - Integraciones: Location API nativa, Maps SDK, Geocoding, Routes, Places y geofencing
 
@@ -13,7 +13,7 @@ Aplicación móvil integrada para que un familiar administre hasta dos adultos m
 
 Requiere Node.js 22.5 o posterior.
 
-1. Copia `.env.example` como `.env` y cambia `JWT_SECRET`.
+1. Copia `.env.example` como `.env`, configura `MONGODB_URI` y cambia `JWT_SECRET`.
 2. Agrega una clave de Google Maps con Geocoding habilitado en `GOOGLE_MAPS_API_KEY`.
 3. Instala dependencias con `npm install`.
 4. Crea las dos cuentas y datos de exposición con `npm run seed:demo`.
@@ -33,8 +33,7 @@ El recorrido completo para la presentación está en [GUIA_DEMO_UNIVERSIDAD.md](
 
 ```bash
 npm test
-npm run typecheck
-npm run build -w @cuido/api
+npm run seed:demo
 ```
 
 ## Reglas implementadas

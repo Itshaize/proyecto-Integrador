@@ -1,150 +1,65 @@
 import bcrypt from "bcryptjs";
-import { createDatabase } from "./db.js";
-const ADMIN = {
-  nombre: "Ana Sof\xEDa Ruiz",
-  cedula: "1712345675",
-  correo: "ana@cuido.ec",
-  telefono: "0987654321",
-  password: "CuidoDemo123"
-};
-const ADULT = {
-  nombre: "Mar\xEDa Elena Guzm\xE1n",
-  cedula: "0926687815",
-  correo: "maria@cuido.ec",
-  telefono: "0994567810",
-  password: "Temporal123",
-  fechaNacimiento: "1952-04-18",
-  direccion: "Av. Amazonas y Naciones Unidas, Quito",
-  latitude: -0.1807,
-  longitude: -78.4678,
-  contactoEmergencia: ADMIN.telefono
-};
-const db = createDatabase();
-const [adminHash, adultHash] = await Promise.all([
-  bcrypt.hash(ADMIN.password, 12),
-  bcrypt.hash(ADULT.password, 12)
-]);
+import { connectDatabase, disconnectDatabase, models, nextId } from "./db.js";
+
+const ADMIN = { nombre: "Ana Sofía Ruiz", cedula: "1712345675", correo: "ana@cuido.ec", telefono: "0987654321", password: "CuidoDemo123" };
+const ADULT = { nombre: "María Elena Guzmán", cedula: "0926687815", correo: "maria@cuido.ec", telefono: "0994567810", password: "Temporal123", fechaNacimiento: "1952-04-18", direccion: "Av. Amazonas y Naciones Unidas, Quito", latitude: -0.1807, longitude: -78.4678, contactoEmergencia: ADMIN.telefono };
+
 try {
-  db.exec("BEGIN");
-  db.prepare(
-    `INSERT INTO usuarios (nombre,cedula,correo,telefono,password_hash,rol,estado)
-     VALUES (?,?,?,?,?,'ADMINISTRADOR','ACTIVO')
-     ON CONFLICT(correo) DO UPDATE SET
-       nombre=excluded.nombre,cedula=excluded.cedula,telefono=excluded.telefono,
-       password_hash=excluded.password_hash,rol='ADMINISTRADOR',estado='ACTIVO'`
-  ).run(ADMIN.nombre, ADMIN.cedula, ADMIN.correo, ADMIN.telefono, adminHash);
-  const adminId = Number(
-    db.prepare(
-      "SELECT id_usuario FROM usuarios WHERE correo=? COLLATE NOCASE"
-    ).get(ADMIN.correo).id_usuario
-  );
-  db.prepare(
-    `INSERT INTO usuarios (nombre,cedula,correo,telefono,password_hash,rol,estado)
-     VALUES (?,?,?,?,?,'ADULTO_MAYOR','ACTIVO')
-     ON CONFLICT(correo) DO UPDATE SET
-       nombre=excluded.nombre,cedula=excluded.cedula,telefono=excluded.telefono,
-       password_hash=excluded.password_hash,rol='ADULTO_MAYOR',estado='ACTIVO'`
-  ).run(ADULT.nombre, ADULT.cedula, ADULT.correo, ADULT.telefono, adultHash);
-  const adultUserId = Number(
-    db.prepare(
-      "SELECT id_usuario FROM usuarios WHERE correo=? COLLATE NOCASE"
-    ).get(ADULT.correo).id_usuario
-  );
-  db.prepare(
-    `INSERT INTO adultos_mayores
-      (id_usuario,fecha_nacimiento,direccion,latitude,longitude,contacto_emergencia,foto)
-     VALUES (?,?,?,?,?,?,NULL)
-     ON CONFLICT(id_usuario) DO UPDATE SET
-       fecha_nacimiento=excluded.fecha_nacimiento,direccion=excluded.direccion,
-       latitude=excluded.latitude,longitude=excluded.longitude,
-       contacto_emergencia=excluded.contacto_emergencia`
-  ).run(
-    adultUserId,
-    ADULT.fechaNacimiento,
-    ADULT.direccion,
-    ADULT.latitude,
-    ADULT.longitude,
-    ADULT.contactoEmergencia
-  );
-  const adultId = Number(
-    db.prepare("SELECT id_adulto FROM adultos_mayores WHERE id_usuario=?").get(adultUserId).id_adulto
-  );
-  db.prepare(
-    `INSERT INTO relaciones (id_administrador,id_adulto,estado)
-     VALUES (?,?,'ACTIVO')
-     ON CONFLICT(id_adulto) DO UPDATE SET
-       id_administrador=excluded.id_administrador,estado='ACTIVO'`
-  ).run(adminId, adultId);
-  db.prepare(
-    `INSERT INTO zonas_seguras
-      (id_adulto,nombre,direccion,latitude,longitude,radio,estado)
-     VALUES (?,'Casa',?,?,?,350,'ACTIVO')
-     ON CONFLICT(id_adulto) DO UPDATE SET
-       nombre='Casa',direccion=excluded.direccion,latitude=excluded.latitude,
-       longitude=excluded.longitude,radio=350,estado='ACTIVO'`
-  ).run(adultId, ADULT.direccion, ADULT.latitude, ADULT.longitude);
-  const now = ecuadorNow();
-  const latestLocation = db.prepare(
-    "SELECT id_ubicacion FROM ubicaciones WHERE id_adulto=? ORDER BY id_ubicacion DESC LIMIT 1"
-  ).get(adultId);
-  if (latestLocation) {
-    db.prepare(
-      `UPDATE ubicaciones SET latitude=?,longitude=?,accuracy=25,fecha=?,hora=?,direccion=?
-       WHERE id_ubicacion=?`
-    ).run(
-      ADULT.latitude,
-      ADULT.longitude,
-      now.fecha,
-      now.hora,
-      ADULT.direccion,
-      latestLocation.id_ubicacion
-    );
+  await connectDatabase();
+  const [adminHash, adultHash] = await Promise.all([bcrypt.hash(ADMIN.password, 12), bcrypt.hash(ADULT.password, 12)]);
+
+  const admin = await upsertUser(ADMIN, "ADMINISTRADOR", adminHash);
+  const adultUser = await upsertUser(ADULT, "ADULTO_MAYOR", adultHash);
+
+  let adult = await models.Adult.findOne({ id_usuario: adultUser.id_usuario });
+  if (!adult) {
+    adult = await models.Adult.create({ id_adulto: await nextId("adultos"), id_usuario: adultUser.id_usuario, fecha_nacimiento: ADULT.fechaNacimiento, direccion: ADULT.direccion, latitude: ADULT.latitude, longitude: ADULT.longitude, contacto_emergencia: ADULT.contactoEmergencia, foto: null });
   } else {
-    db.prepare(
-      `INSERT INTO ubicaciones
-        (id_adulto,latitude,longitude,accuracy,fecha,hora,direccion)
-       VALUES (?,?,?,25,?,?,?)`
-    ).run(
-      adultId,
-      ADULT.latitude,
-      ADULT.longitude,
-      now.fecha,
-      now.hora,
-      ADULT.direccion
-    );
+    Object.assign(adult, { fecha_nacimiento: ADULT.fechaNacimiento, direccion: ADULT.direccion, latitude: ADULT.latitude, longitude: ADULT.longitude, contacto_emergencia: ADULT.contactoEmergencia });
+    await adult.save();
   }
-  const hasDemoAlert = db.prepare("SELECT 1 FROM alertas WHERE id_adulto=? AND tipo='SOS' LIMIT 1").get(adultId);
-  if (!hasDemoAlert) {
-    db.prepare(
-      `INSERT INTO alertas
-        (id_adulto,tipo,fecha,hora,latitude,longitude,estado)
-       VALUES (?,'SOS',?,?,?,?, 'NUEVA')`
-    ).run(adultId, now.fecha, now.hora, ADULT.latitude, ADULT.longitude);
+
+  await models.Relation.findOneAndUpdate(
+    { id_adulto: adult.id_adulto },
+    { $set: { id_administrador: admin.id_usuario, estado: "ACTIVO" }, $setOnInsert: { id_relacion: await nextId("relaciones"), fecha_asignacion: new Date() } },
+    { upsert: true, returnDocument: "after" }
+  );
+  await models.SafeZone.findOneAndUpdate(
+    { id_adulto: adult.id_adulto },
+    { $set: { nombre: "Casa", direccion: ADULT.direccion, latitude: ADULT.latitude, longitude: ADULT.longitude, radio: 350, estado: "ACTIVO" }, $setOnInsert: { id_zona: await nextId("zonas_seguras") } },
+    { upsert: true, returnDocument: "after" }
+  );
+
+  const now = ecuadorNow();
+  const latest = await models.Location.findOne({ id_adulto: adult.id_adulto }).sort({ id_ubicacion: -1 });
+  if (latest) {
+    Object.assign(latest, { latitude: ADULT.latitude, longitude: ADULT.longitude, accuracy: 25, fecha: now.fecha, hora: now.hora, direccion: ADULT.direccion });
+    await latest.save();
+  } else {
+    await models.Location.create({ id_ubicacion: await nextId("ubicaciones"), id_adulto: adult.id_adulto, latitude: ADULT.latitude, longitude: ADULT.longitude, accuracy: 25, fecha: now.fecha, hora: now.hora, direccion: ADULT.direccion });
   }
-  db.exec("COMMIT");
-  console.log("Credenciales demo listas:");
+  if (!await models.Alert.exists({ id_adulto: adult.id_adulto, tipo: "SOS" })) {
+    await models.Alert.create({ id_alerta: await nextId("alertas"), id_adulto: adult.id_adulto, tipo: "SOS", fecha: now.fecha, hora: now.hora, latitude: ADULT.latitude, longitude: ADULT.longitude, estado: "NUEVA" });
+  }
+
+  console.log("MongoDB Atlas: datos demo listos en la base cuido.");
   console.log(`ADMIN  ${ADMIN.correo} / ${ADMIN.password}`);
   console.log(`ADULTO ${ADULT.correo} / ${ADULT.password}`);
-} catch (error) {
-  db.exec("ROLLBACK");
-  throw error;
 } finally {
-  db.close();
+  await disconnectDatabase();
 }
+
+async function upsertUser(data, rol, passwordHash) {
+  let user = await models.User.findOne({ correo: data.correo });
+  if (!user) {
+    user = new models.User({ id_usuario: await nextId("usuarios") });
+  }
+  Object.assign(user, { nombre: data.nombre, cedula: data.cedula, correo: data.correo, telefono: data.telefono, password_hash: passwordHash, rol, estado: "ACTIVO" });
+  return user.save();
+}
+
 function ecuadorNow() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Guayaquil",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23"
-  }).formatToParts(/* @__PURE__ */ new Date());
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Guayaquil", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
   const get = (type) => parts.find((part) => part.type === type)?.value ?? "";
-  return {
-    fecha: `${get("year")}-${get("month")}-${get("day")}`,
-    hora: `${get("hour")}:${get("minute")}:${get("second")}`
-  };
+  return { fecha: `${get("year")}-${get("month")}-${get("day")}`, hora: `${get("hour")}:${get("minute")}:${get("second")}` };
 }

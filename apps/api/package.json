@@ -17,6 +17,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "localtunnel": "^2.0.2",
+    "mongoose": "^9.7.4",
     "zod": "^4.1.13"
   },
   "devDependencies": {

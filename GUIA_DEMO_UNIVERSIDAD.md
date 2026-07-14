@@ -118,7 +118,7 @@ Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 4000,8081
 
 1. Leer primero `README.md`, `docs/INTEGRACION.md`, `docs/API.md` y este archivo.
 2. Mantener estas credenciales demo y el comando `npm run seed:demo`; son parte del guion de evaluación.
-3. No editar directamente `apps/api/data/cuido.db`. Cambiar datos reproducibles únicamente en `apps/api/src/seed.ts`.
+3. No editar manualmente las colecciones de demostración en Atlas. Cambiar datos reproducibles únicamente en `apps/api/src/seed.js`.
 4. Mantener `react-native-maps` para Android/iOS y Leaflet para web mediante `map.native.tsx` y `map.web.tsx`.
 5. Mantener almacenamiento de sesión separado: SecureStore en nativo y localStorage en web.
 6. No exponer JWT, contraseñas reales ni `GOOGLE_MAPS_API_KEY` en el frontend o en Git.
@@ -131,7 +131,7 @@ npm run typecheck
 npm run build -w @cuido/api
 ```
 
-8. Verificar manualmente ambos roles en `http://localhost:8081` y confirmar que `git status` no incluya `.env`, bases SQLite, logs ni `dist-web`.
+8. Verificar manualmente ambos roles en `http://localhost:8081` y confirmar que `git status` no incluya `.env`, secretos, logs ni `dist-web`.
 
 ## Estado esperado en Git
 

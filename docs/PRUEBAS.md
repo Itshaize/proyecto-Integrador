@@ -1,6 +1,6 @@
 # Evidencia de pruebas
 
-La suite automatizada integrada está en `apps/api/test/api.test.ts` y se ejecuta con `npm test`.
+La suite automatizada integrada está en `apps/api/test/api.test.js` y se ejecuta con `npm test`. Usa una base MongoDB temporal y la elimina al finalizar.
 
 | Caso obligatorio | Cobertura |
 |---|---|
@@ -15,7 +15,7 @@ La suite automatizada integrada está en `apps/api/test/api.test.ts` y se ejecut
 | Convertir dirección de Quito | API automatizada con adaptador simulado; integración real disponible con clave |
 | Guardar ubicación y consultar última | API automatizada con token de adulto y lectura del administrador |
 | Detectar dentro y fuera de zona | Haversine real y creación automática de alerta |
-| Enviar S.O.S. y actualizar estado | Persistencia SQLite y estados oficiales |
+| Enviar S.O.S. y actualizar estado | Persistencia MongoDB y estados oficiales |
 | Impedir acceso a adultos ajenos | Segundo administrador recibe `403` |
 | Calcular ruta | Adaptador HTTP de Routes verificado sin consumir cuota |
 | Buscar cinco categorías de ayuda | Places verificado para todas las categorías oficiales |
